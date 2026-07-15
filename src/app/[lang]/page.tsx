@@ -1,35 +1,39 @@
 import { getMangaList, getCoverUrl } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
+import Link from "next/link";
 
 // Map MangaDex API format to our internal Manga format
 const mapMangaDexData = (mdData: any) => {
+  if (!mdData || !Array.isArray(mdData)) return [];
+  
   return mdData.map((m: any) => {
-    // Find cover art relationship
     const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
     const author = m.relationships.find((r: any) => r.type === 'author');
     
-    // Find title (usually en, but fallback to first available)
-    const titleKey = Object.keys(m.attributes.title)[0];
-    const title = m.attributes.title.en || m.attributes.title[titleKey];
+    // Safely parse title falling back to any available localized object keys
+    let title = 'Unknown Title';
+    if (m.attributes.title) {
+        title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
+    }
     
-    // Find description
-    const descKey = m.attributes.description ? Object.keys(m.attributes.description)[0] : null;
-    const description = descKey ? (m.attributes.description.en || m.attributes.description[descKey]) : 'No synopsis available.';
+    let description = 'No synopsis available.';
+    if (m.attributes.description && typeof m.attributes.description === 'object') {
+        description = m.attributes.description.en || m.attributes.description.id || Object.values(m.attributes.description)[0] || description;
+    }
     
-    // Extract genres (tags)
     const genres = m.attributes.tags
       .filter((t: any) => t.attributes.group === 'genre' || t.attributes.group === 'theme')
-      .map((t: any) => t.attributes.name.en)
+      .map((t: any) => t.attributes.name.en || Object.values(t.attributes.name)[0])
       .slice(0, 3);
       
     return {
       id: m.id,
       title: title,
-      slug: m.id, // Using ID as slug for MangaDex
+      slug: m.id, 
       cover_url: getCoverUrl(m.id, coverArt?.attributes?.fileName),
-      author: author ? 'Unknown Author' : 'Various', // Author name requires separate fetch or includes
-      rating: (Math.random() * (5 - 3.5) + 3.5).toFixed(1), // Mock rating since MD doesn't provide it in base list
-      status: m.attributes.status.toUpperCase(),
+      author: author ? 'Unknown Author' : 'Various', 
+      rating: (Math.random() * (5 - 3.5) + 3.5).toFixed(1),
+      status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
       genres: genres.length > 0 ? genres : ['Manga'],
       synopsis: description
     };
@@ -77,9 +81,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 {heroManga.synopsis}
               </p>
               <div className="flex gap-4 pt-2">
-                <button className="bg-white text-black px-6 py-2 rounded-md font-bold text-sm hover:bg-zinc-200 transition-colors">
+                <Link href={`/${lang}/manga/${heroManga.slug}`} className="bg-white text-black px-6 py-2 rounded-md font-bold text-sm hover:bg-zinc-200 transition-colors">
                   START READING
-                </button>
+                </Link>
                 <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors">
                   + WISHLIST
                 </button>
