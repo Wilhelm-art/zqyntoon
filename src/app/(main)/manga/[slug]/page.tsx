@@ -175,6 +175,16 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
                 });
             }
         }
+        
+        // Helper to sort chapters descending (Newest first)
+        const sortDesc = (a: any, b: any) => {
+          const numA = parseFloat(a.chapter_number) || 0;
+          const numB = parseFloat(b.chapter_number) || 0;
+          return numB - numA;
+        };
+
+        idChapters.sort(sortDesc);
+        enChapters.sort(sortDesc);
 
         setAllChapters({ en: enChapters, id: idChapters });
 
