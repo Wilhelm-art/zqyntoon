@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchManga } from '@/lib/scraper/komikcast';
+import { searchManga } from '@/lib/scraper/bacakomik';
 
 export async function GET(request: NextRequest) {
   try {
