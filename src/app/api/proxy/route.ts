@@ -3,11 +3,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALLOWED_DOMAINS = [
-  'api.mangadex.org',
-  'uploads.mangadex.org',
-];
-
 export async function GET(request: NextRequest) {
   try {
     const targetUrl = request.nextUrl.searchParams.get('url');
@@ -23,12 +18,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
     }
 
-    const isAllowed =
-      ALLOWED_DOMAINS.some(domain => urlObj.hostname === domain) ||
-      urlObj.hostname.endsWith('.mangadex.network') ||
-      urlObj.hostname.endsWith('.mangadex.org');
-
-    if (!isAllowed) {
+    // We allow any external domain here because scrapers (Consumet, Komikcast) 
+    // use many unpredictable CDNs for images.
+    // However, we prevent localhost/internal proxying to be safe.
+    if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
       return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
     }
 

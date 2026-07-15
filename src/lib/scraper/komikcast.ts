@@ -14,7 +14,8 @@ export async function searchManga(title: string) {
   });
   
   if (!response.ok) {
-    throw new Error(`Failed to search: ${response.status}`);
+    const errText = await response.text().catch(() => 'No text');
+    throw new Error(`Failed to fetch search page: ${response.status} ${errText.substring(0, 100)}`);
   }
   
   const html = await response.text();

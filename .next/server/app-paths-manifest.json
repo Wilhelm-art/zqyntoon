@@ -1,0 +1,23 @@
+{
+  "/(main)/(legal)/about/page": "app/(main)/(legal)/about/page.js",
+  "/(main)/(legal)/dmca/page": "app/(main)/(legal)/dmca/page.js",
+  "/(main)/(legal)/privacy/page": "app/(main)/(legal)/privacy/page.js",
+  "/(main)/(legal)/terms/page": "app/(main)/(legal)/terms/page.js",
+  "/(main)/genre/[slug]/page": "app/(main)/genre/[slug]/page.js",
+  "/(main)/genre/page": "app/(main)/genre/page.js",
+  "/(main)/latest/page": "app/(main)/latest/page.js",
+  "/(main)/manga/[slug]/chapter-[id]/page": "app/(main)/manga/[slug]/chapter-[id]/page.js",
+  "/(main)/manga/[slug]/page": "app/(main)/manga/[slug]/page.js",
+  "/(main)/page": "app/(main)/page.js",
+  "/(main)/trending/page": "app/(main)/trending/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/en-scraper/chapters/route": "app/api/en-scraper/chapters/route.js",
+  "/api/en-scraper/pages/route": "app/api/en-scraper/pages/route.js",
+  "/api/en-scraper/search/route": "app/api/en-scraper/search/route.js",
+  "/api/id-scraper/chapters/route": "app/api/id-scraper/chapters/route.js",
+  "/api/id-scraper/pages/route": "app/api/id-scraper/pages/route.js",
+  "/api/id-scraper/search/route": "app/api/id-scraper/search/route.js",
+  "/api/proxy/route": "app/api/proxy/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js"
+}

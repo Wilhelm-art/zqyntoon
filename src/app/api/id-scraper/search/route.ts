@@ -17,6 +17,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Scraper search error:', error);
-    return NextResponse.json({ error: 'Failed to search manga' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to search manga' }, { status: 500 });
   }
 }
