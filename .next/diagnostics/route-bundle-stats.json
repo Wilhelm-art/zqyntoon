@@ -1,13 +1,13 @@
 [
   {
     "route": "/manga/[slug]/chapter-[id]",
-    "firstLoadUncompressedJsBytes": 769844,
+    "firstLoadUncompressedJsBytes": 633351,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
       ".next\\static\\chunks\\0cs20pop0xsc4.js",
       ".next\\static\\chunks\\3f6ol0y3t5xu3.js",
-      ".next\\static\\chunks\\0kj67ycvc7rjj.js",
+      ".next\\static\\chunks\\1bkwp9dhi5okc.js",
       ".next\\static\\chunks\\3z5q_p4msz2ha.js",
       ".next\\static\\chunks\\15orcrkp-_9ct.js",
       ".next\\static\\chunks\\3rxl-jt3pdxgx.js",
@@ -17,13 +17,13 @@
   },
   {
     "route": "/manga/[slug]",
-    "firstLoadUncompressedJsBytes": 743165,
+    "firstLoadUncompressedJsBytes": 606672,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
       ".next\\static\\chunks\\0cs20pop0xsc4.js",
       ".next\\static\\chunks\\0_cyx-o166inh.js",
-      ".next\\static\\chunks\\0kj67ycvc7rjj.js",
+      ".next\\static\\chunks\\1bkwp9dhi5okc.js",
       ".next\\static\\chunks\\3z5q_p4msz2ha.js",
       ".next\\static\\chunks\\15orcrkp-_9ct.js",
       ".next\\static\\chunks\\3rxl-jt3pdxgx.js",
@@ -33,13 +33,13 @@
   },
   {
     "route": "/",
-    "firstLoadUncompressedJsBytes": 742639,
+    "firstLoadUncompressedJsBytes": 606146,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
       ".next\\static\\chunks\\0cs20pop0xsc4.js",
       ".next\\static\\chunks\\2fcxpbj2jwnkd.js",
-      ".next\\static\\chunks\\0kj67ycvc7rjj.js",
+      ".next\\static\\chunks\\1bkwp9dhi5okc.js",
       ".next\\static\\chunks\\3z5q_p4msz2ha.js",
       ".next\\static\\chunks\\15orcrkp-_9ct.js",
       ".next\\static\\chunks\\3rxl-jt3pdxgx.js",
