@@ -154,9 +154,6 @@ export function Navbar() {
             </button>
           </div>
           
-          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#F27D26] to-[#ff9d5c] flex items-center justify-center text-xs font-bold text-black cursor-pointer ml-2">
-            JD
-          </div>
         </div>
       </div>
     </nav>
