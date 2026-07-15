@@ -161,8 +161,12 @@ export const getChapterPages = async (chapterId: string): Promise<string[]> => {
   const hash: string = data.chapter.hash;
   const pages: string[] = data.chapter.data;
 
-  // Return direct CDN URLs — browser <img> tags load these without CORS issues
-  return pages.map((page) => `${baseUrl}/data/${hash}/${page}`);
+  // Route through /api/proxy — Vercel server fetches from MangaDex CDN directly,
+  // bypassing Indonesian ISP DNS blocking (Telkomsel internetbaik, Indihome, etc.)
+  return pages.map((page) => {
+    const directUrl = `${baseUrl}/data/${hash}/${page}`;
+    return `/api/proxy?url=${encodeURIComponent(directUrl)}`;
+  });
 };
 
 export const searchManga = async (title: string) => {
