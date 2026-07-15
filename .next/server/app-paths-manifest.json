@@ -12,6 +12,9 @@
   "/(main)/trending/page": "app/(main)/trending/page.js",
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/id-scraper/chapters/route": "app/api/id-scraper/chapters/route.js",
+  "/api/id-scraper/pages/route": "app/api/id-scraper/pages/route.js",
+  "/api/id-scraper/search/route": "app/api/id-scraper/search/route.js",
   "/api/proxy/route": "app/api/proxy/route.js",
   "/favicon.ico/route": "app/favicon.ico/route.js"
 }

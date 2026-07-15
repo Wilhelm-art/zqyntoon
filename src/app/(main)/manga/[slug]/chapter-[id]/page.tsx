@@ -44,11 +44,48 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Execute API calls in parallel
-        const [mangaData, pagesData] = await Promise.all([
-          getMangaDetails(slug),
-          getChapterPages(id) // Pass the raw MangaDex chapter UUID
-        ]);
+
+        let pagesData: string[] = [];
+        let mangaData: any = null;
+
+        // Extract raw ID if it's from the scraper
+        const isScraper = id.startsWith('id-scraper:');
+        let rawId = id;
+        if (isScraper) {
+          const encodedEndpoint = id.replace('id-scraper:', '');
+          try {
+            rawId = Buffer.from(encodedEndpoint, 'base64').toString('utf-8');
+          } catch (e) {
+            rawId = encodedEndpoint; // Fallback just in case
+          }
+        }
+
+        if (isScraper) {
+          // Fetch pages from our scraper API
+          const [mangaRes, pagesRes] = await Promise.all([
+            getMangaDetails(slug),
+            fetch(`/api/id-scraper/pages?endpoint=${encodeURIComponent(rawId)}`)
+          ]);
+          
+          mangaData = mangaRes;
+          
+          if (pagesRes.ok) {
+            const data = await pagesRes.json();
+            pagesData = data.pages || [];
+            
+            // Route through our proxy to avoid mixed-content or hotlink blocks
+            // Use a custom header to bypass if necessary, but standard proxy usually works
+            pagesData = pagesData.map(url => `/api/proxy?url=${encodeURIComponent(url)}`);
+          }
+        } else {
+          // Normal MangaDex fetch
+          const [mRes, pRes] = await Promise.all([
+            getMangaDetails(slug),
+            getChapterPages(id) 
+          ]);
+          mangaData = mRes;
+          pagesData = pRes;
+        }
         
         const title = getMangaTitle(mangaData);
         

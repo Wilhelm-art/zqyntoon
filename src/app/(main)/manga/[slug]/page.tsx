@@ -20,26 +20,64 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
   const [allChapters, setAllChapters] = useState<{ en: any[]; id: any[] }>({ en: [], id: [] });
 
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         const [mangaData, rawChapters] = await Promise.all([
           getMangaDetails(slug),
-          getMangaChapters(slug, ['en', 'id'])
+          getMangaChapters(slug, lang === 'id' ? ['id', 'en'] : ['en', 'id'])
         ]);
 
         const coverArt = mangaData.relationships?.find((r: any) => r.type === 'cover_art');
         const author = mangaData.relationships?.find((r: any) => r.type === 'author');
-
         const title = getMangaTitle(mangaData);
 
         let description = 'No synopsis available.';
         if (mangaData.attributes.description && typeof mangaData.attributes.description === 'object') {
-          description = mangaData.attributes.description.en || mangaData.attributes.description.id || Object.values(mangaData.attributes.description)[0] as string || description;
+            description = mangaData.attributes.description.en || mangaData.attributes.description.id || Object.values(mangaData.attributes.description)[0] as string || description;
         }
 
-        const genres = (mangaData.attributes.tags ?? [])
-          .filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
+        // 1. Process MangaDex Chapters
+        let finalChapters = rawChapters.map((ch: any) => {
+          const group = ch.relationships?.find((r: any) => r.type === 'scanlation_group');
+          return {
+            id: ch.id,
+            chapter_number: ch.attributes.chapter || 'Oneshot',
+            title: ch.attributes.title || null,
+            published_at: ch.attributes.readableAt || ch.attributes.publishAt,
+            scanlator: group?.attributes?.name || 'Official',
+            externalUrl: ch.attributes.externalUrl || null,
+          };
+        });
+
+        // 2. Fetch from ID Scraper if language is 'id'
+        if (lang === 'id' && title && title !== "Unknown") {
+          try {
+            // Search for the manga title on our scraper
+            const searchRes = await fetch(`/api/id-scraper/search?title=${encodeURIComponent(title)}`);
+            if (searchRes.ok) {
+              const searchData = await searchRes.json();
+              if (searchData.results && searchData.results.length > 0) {
+                // Pick the first match
+                const match = searchData.results[0];
+                const chaptersRes = await fetch(`/api/id-scraper/chapters?endpoint=${encodeURIComponent(match.endpoint)}`);
+                if (chaptersRes.ok) {
+                  const chaptersData = await chaptersRes.json();
+                  if (chaptersData.chapters && chaptersData.chapters.length > 0) {
+                    // Prepend or replace? Let's just use the scraper chapters entirely for ID,
+                    // or combine them. Usually scraper is more complete for ID.
+                    finalChapters = chaptersData.chapters;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Failed to fetch from ID scraper', e);
+          }
+        }
+
+        const genres = mangaData.attributes.tags
+          ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
           .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name ?? {})[0])
           .slice(0, 4);
 
@@ -58,26 +96,43 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           synopsis: description,
         });
 
-        // Map a chapter to display format
-        const mapChapter = (ch: any) => {
-          const group = ch.relationships?.find((r: any) => r.type === 'scanlation_group');
-          return {
-            id: ch.id,
-            chapter_number: ch.attributes.chapter || 'Oneshot',
-            title: ch.attributes.title || null,
-            published_at: ch.attributes.readableAt || ch.attributes.publishAt,
-            scanlator: group?.attributes?.name || 'Official',
-            externalUrl: ch.attributes.externalUrl || null,
-          };
-        };
-
-        const idChapters = rawChapters
-          .filter((ch: any) => ch.attributes.translatedLanguage === 'id')
-          .map(mapChapter);
-
-        const enChapters = rawChapters
-          .filter((ch: any) => ch.attributes.translatedLanguage === 'en')
-          .map(mapChapter);
+        // The 'finalChapters' variable currently holds the MangaDex chapters for BOTH languages OR the scraper chapters if lang === 'id'.
+        // However, we still need to split them by language properly.
+        // Wait, if it came from scraper, they are all 'id' chapters!
+        
+        let idChapters: any[] = [];
+        let enChapters: any[] = [];
+        
+        const isScraper = finalChapters.length > 0 && finalChapters[0].isScraper;
+        
+        if (isScraper) {
+            idChapters = finalChapters; // Scraper is 100% ID
+            
+            // Re-map the rawChapters just for EN fallback
+            enChapters = rawChapters
+              .filter((ch: any) => ch.attributes.translatedLanguage === 'en')
+              .map((ch: any) => {
+                 const group = ch.relationships?.find((r: any) => r.type === 'scanlation_group');
+                 return {
+                   id: ch.id,
+                   chapter_number: ch.attributes.chapter || 'Oneshot',
+                   title: ch.attributes.title || null,
+                   published_at: ch.attributes.readableAt || ch.attributes.publishAt,
+                   scanlator: group?.attributes?.name || 'Official',
+                   externalUrl: ch.attributes.externalUrl || null,
+                 };
+              });
+        } else {
+            // Normal MangaDex mapping
+            idChapters = finalChapters.filter((ch: any) => {
+                const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
+                return rawMatch && rawMatch.attributes.translatedLanguage === 'id';
+            });
+            enChapters = finalChapters.filter((ch: any) => {
+                const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
+                return rawMatch && rawMatch.attributes.translatedLanguage === 'en';
+            });
+        }
 
         setAllChapters({ en: enChapters, id: idChapters });
 
@@ -106,7 +161,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
         setIsLoading(false);
       }
     };
-    loadData();
+    fetchData();
   }, [slug, lang]);
 
   // Switch chapter language manually

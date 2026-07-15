@@ -3,13 +3,13 @@
   "middleware": {
     "/": {
       "files": [
-        "server/edge/chunks/node_modules_next_dist_esm_build_templates_edge-wrapper_0_kjzx3.js",
-        "server/edge/chunks/[root-of-the-server]__0emy-m4._.js",
-        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0a9xbl8.js"
+        "server/edge/chunks/[root-of-the-server]__1osrt2u._.js",
+        "server/edge/chunks/node_modules_next_dist_0o2-izl._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0bjtjym.js"
       ],
       "name": "middleware",
       "page": "/",
-      "entrypoint": "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0a9xbl8.js",
+      "entrypoint": "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0bjtjym.js",
       "matchers": [
         {
           "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next|favicon.ico|api|.*.).*))(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
@@ -19,7 +19,7 @@
       "wasm": [],
       "assets": [],
       "env": {
-        "__NEXT_BUILD_ID": "dhvEpOz25x4yvmsmnOHSS",
+        "__NEXT_BUILD_ID": "MpcYtWHqnQ9H86s6bsSSA",
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "31Oxn8Ty7ixC1AGmUik3aklTXQxFcuQoPO/ddX3HZD0=",
         "__NEXT_PREVIEW_MODE_ID": "4c7430d0ec815d67fbf80f076e417e9e",
         "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "374c5bd7848c48816504e1fef357eaace3810facd40b46e771b7526825621839",
