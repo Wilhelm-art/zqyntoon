@@ -32,24 +32,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
     }
 
-    // at-home/server URLs return time-limited CDN URLs — must NOT be cached
+    // at-home/server URLs return time-limited CDN tokens — must NOT be cached
     const isAtHomeRequest = urlObj.pathname.includes('/at-home/server/');
+    // Cover images can be cached for 24h
+    const isCoverImage = urlObj.hostname === 'uploads.mangadex.org';
 
     const response = await fetch(targetUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json, image/*, */*',
+        'Accept': 'application/json, image/webp, image/*, */*',
         'User-Agent': 'ZynqToon/1.0 (https://zynqtoon.vercel.app)',
+        'Referer': 'https://mangadex.org/',
+        'Origin': 'https://mangadex.org',
       },
-      // at-home server: no cache (time-limited tokens)
-      // everything else: cache 60s
       ...(isAtHomeRequest
         ? { cache: 'no-store' }
-        : { next: { revalidate: 60 } }),
+        : { next: { revalidate: isCoverImage ? 86400 : 60 } }),
     });
 
     if (!response.ok) {
-      // Pass through MangaDex error responses so the client can read them
       const text = await response.text();
       let body: any;
       try { body = JSON.parse(text); } catch { body = { error: text }; }
@@ -58,13 +59,13 @@ export async function GET(request: NextRequest) {
 
     const contentType = response.headers.get('content-type') ?? '';
 
-    // Image response — return raw buffer with correct content-type
+    // Image response — return raw buffer with correct content-type + cache
     if (contentType.startsWith('image/')) {
       const buffer = await response.arrayBuffer();
       return new NextResponse(buffer, {
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=86400',
+          'Cache-Control': 'public, max-age=86400, s-maxage=86400',
         },
       });
     }
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data, {
       headers: isAtHomeRequest
         ? { 'Cache-Control': 'no-store' }
-        : { 'Cache-Control': 'public, max-age=60' },
+        : { 'Cache-Control': 'public, max-age=60, s-maxage=60' },
     });
   } catch (error) {
     console.error('Proxy error:', error);

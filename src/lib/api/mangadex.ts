@@ -4,25 +4,44 @@
 
 const isClient = typeof window !== 'undefined';
 
-const buildUrl = (path: string) => {
-    if (!isClient) return `https://api.mangadex.org${path}`;
-    return `/api/proxy?url=${encodeURIComponent(`https://api.mangadex.org${path}`)}`;
+/**
+ * Build a proxied URL for MangaDex API requests.
+ * On the server, fetches MangaDex directly.
+ * On the client, routes through /api/proxy to avoid CORS.
+ */
+const buildApiUrl = (path: string): string => {
+  if (!isClient) return `https://api.mangadex.org${path}`;
+  return `/api/proxy?url=${encodeURIComponent(`https://api.mangadex.org${path}`)}`;
 };
 
 /**
- * Returns the MangaDex cover URL with .512.jpg quality suffix.
- * Uses the manga ID + filename from the cover_art relationship.
+ * Build a proxied URL for MangaDex uploads (cover images).
+ * Always routes through /api/proxy so the server fetches with proper
+ * Referer/Origin headers, bypassing any CDN hotlink restrictions.
+ */
+const buildCoverProxyUrl = (path: string): string => {
+  return `/api/proxy?url=${encodeURIComponent(`https://uploads.mangadex.org${path}`)}`;
+};
+
+/**
+ * Returns a proxied cover URL for a manga.
+ * Uses MangaDex cover art filename tied to the specific manga ID.
+ * Routes through /api/proxy to handle Referer requirements.
+ *
+ * Thumbnail sizes:
+ *   .256.jpg = 256px wide
+ *   .512.jpg = 512px wide
+ *   (no suffix) = original full size
  */
 export const getCoverUrl = (mangaId: string, fileName?: string | null): string | null => {
   if (!fileName) return null;
-  // .512.jpg = 512px wide thumbnail (faster load, correct aspect ratio)
-  return `https://uploads.mangadex.org/covers/${mangaId}/${fileName}.512.jpg`;
+  // Use .512.jpg thumbnail — correct per MangaDex API docs
+  return buildCoverProxyUrl(`/covers/${mangaId}/${fileName}.512.jpg`);
 };
 
 /**
- * Returns the best cover URL available.
- * ONLY uses MangaDex cover (tied to specific manga by ID) — no AniList fallback
- * which could match a different manga by similar title.
+ * Returns a cover URL or the placeholder SVG.
+ * Guaranteed to return a non-null string.
  */
 export const getCoverUrlWithFallback = (mangaId: string, fileName?: string | null): string => {
   return getCoverUrl(mangaId, fileName) ?? '/cover-placeholder.svg';
@@ -39,7 +58,7 @@ export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_
   params.append('availableTranslatedLanguage[]', 'id');
   params.append('order[followedCount]', 'desc');
 
-  const response = await fetch(buildUrl(`/manga?${params.toString()}`));
+  const response = await fetch(buildApiUrl(`/manga?${params.toString()}`));
   const data = await response.json();
   return data.data ?? [];
 };
@@ -86,7 +105,7 @@ export const getMangaByTag = async ({
   params.append('includedTags[]', tagId);
   params.append('order[followedCount]', 'desc');
 
-  const response = await fetch(buildUrl(`/manga?${params.toString()}`));
+  const response = await fetch(buildApiUrl(`/manga?${params.toString()}`));
   const data = await response.json();
   return data.data ?? [];
 };
@@ -95,7 +114,7 @@ export const getMangaDetails = async (id: string) => {
   const params = new URLSearchParams();
   ['cover_art', 'author', 'artist'].forEach(inc => params.append('includes[]', inc));
 
-  const response = await fetch(buildUrl(`/manga/${id}?${params.toString()}`));
+  const response = await fetch(buildApiUrl(`/manga/${id}?${params.toString()}`));
   const data = await response.json();
   return data.data;
 };
@@ -107,22 +126,21 @@ export const getMangaChapters = async (id: string, languages = ['en', 'id']) => 
   params.append('includes[]', 'scanlation_group');
   params.append('limit', '500');
 
-  const response = await fetch(buildUrl(`/manga/${id}/feed?${params.toString()}`));
+  const response = await fetch(buildApiUrl(`/manga/${id}/feed?${params.toString()}`));
   const data = await response.json();
 
   const chapters = data.data ?? [];
-
-  // Filter out external chapters (e.g. Manga Plus, Shonen Jump)
-  // These have no page data on MangaDex servers and cannot be read here
+  // Filter out external chapters (Manga Plus, Shonen Jump, etc.) — no pages on MangaDex
   return chapters.filter((ch: any) => !ch.attributes?.externalUrl);
 };
 
 /**
  * Fetch chapter pages from MangaDex at-home server.
  * Returns array of full image URLs for this chapter.
+ * Note: images are served directly from MangaDex CDN (no proxy needed for <img> tags).
  */
 export const getChapterPages = async (chapterId: string): Promise<string[]> => {
-  const response = await fetch(buildUrl(`/at-home/server/${chapterId}`));
+  const response = await fetch(buildApiUrl(`/at-home/server/${chapterId}`));
 
   if (!response.ok) {
     throw new Error(`at-home server error: HTTP ${response.status}`);
@@ -130,13 +148,11 @@ export const getChapterPages = async (chapterId: string): Promise<string[]> => {
 
   const data = await response.json();
 
-  // MangaDex API error response
   if (data.result === 'error') {
     const detail = data.errors?.[0]?.detail ?? 'Chapter unavailable';
     throw new Error(detail);
   }
 
-  // Missing required fields
   if (!data.baseUrl || !data.chapter?.hash || !Array.isArray(data.chapter?.data)) {
     throw new Error('Invalid chapter data received from server');
   }
@@ -145,6 +161,7 @@ export const getChapterPages = async (chapterId: string): Promise<string[]> => {
   const hash: string = data.chapter.hash;
   const pages: string[] = data.chapter.data;
 
+  // Return direct CDN URLs — browser <img> tags load these without CORS issues
   return pages.map((page) => `${baseUrl}/data/${hash}/${page}`);
 };
 
@@ -155,7 +172,7 @@ export const searchManga = async (title: string) => {
   params.append('contentRating[]', 'safe');
   params.append('contentRating[]', 'suggestive');
 
-  const response = await fetch(buildUrl(`/manga?${params.toString()}`));
+  const response = await fetch(buildApiUrl(`/manga?${params.toString()}`));
   const data = await response.json();
   return data.data ?? [];
 };

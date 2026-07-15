@@ -6,7 +6,7 @@ import { Search, Globe, X } from "lucide-react";
 import Link from "next/link";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, useRef } from "react";
-import { searchManga, getCoverUrl } from "@/lib/api/mangadex";
+import { searchManga, getCoverUrlWithFallback } from "@/lib/api/mangadex";
 import { useRouter, usePathname } from "next/navigation";
 
 export function Navbar() {
@@ -94,7 +94,7 @@ export function Navbar() {
         className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0"
       >
         <img
-          src={getCoverUrl(manga.id, coverArt?.attributes?.fileName) || "/cover-placeholder.svg"}
+          src={getCoverUrlWithFallback(manga.id, coverArt?.attributes?.fileName)}
           alt={title}
           className="w-8 h-12 object-cover rounded bg-white/5 flex-shrink-0"
           loading="lazy"
