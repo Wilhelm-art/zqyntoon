@@ -73,7 +73,27 @@ export default function Home() {
   const heroManga = trendingManga.length > 0 ? trendingManga[0] : null;
 
   if (isLoading) {
-    return <div className="flex-1 flex items-center justify-center min-h-[50vh] text-white/50">{lang === 'id' ? 'Memuat data manga...' : 'Loading manga data...'}</div>;
+    return (
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="mb-12">
+          <div className="rounded-2xl overflow-hidden aspect-[21/9] md:aspect-[21/7] bg-[#121212] animate-pulse" />
+        </div>
+        {[0,1].map(s => (
+          <div key={s} className="mb-12">
+            <div className="h-6 w-40 bg-white/5 rounded mb-6 animate-pulse" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {Array.from({length:5}).map((_,i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div className="aspect-[3/4] rounded-lg bg-[#1a1a1a] animate-pulse" />
+                  <div className="h-4 bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-2/3 bg-white/5 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </main>
+    );
   }
 
   return (
@@ -132,7 +152,7 @@ export default function Home() {
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Pembaruan Terbaru' : 'Latest Updates'}</h2>
-          <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
+          <Link href="/latest" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {latestManga.map((manga: any) => (

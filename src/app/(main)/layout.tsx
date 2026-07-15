@@ -17,16 +17,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export async function generateMetadata({ params }: { params?: any }): Promise<Metadata> {
-  const lang = 'id';
+export async function generateMetadata(): Promise<Metadata> {
   return {
     title: {
       template: '%s | ZynqToon',
-      default: false ? 'ZynqToon - Read Manga Online' : 'ZynqToon - Baca Komik Manga Bahasa Indonesia',
+      default: 'ZynqToon - Baca Komik Manga Bahasa Indonesia',
     },
-    description: false 
-      ? 'Read manga, manhwa, and manhua online with the fastest updates.'
-      : 'Platform baca komik manga, manhwa, dan manhua bahasa Indonesia dengan update tercepat.',
+    description: 'Platform baca komik manga, manhwa, dan manhua bahasa Indonesia dengan update tercepat.',
     alternates: {
       languages: {
         'id': '/id',
@@ -39,14 +36,11 @@ export async function generateMetadata({ params }: { params?: any }): Promise<Me
 
 export default async function RootLayout({
   children,
-  params,
 }: Readonly<{
   children: React.ReactNode;
-  params?: any;
 }>) {
-  const lang = 'id';
   return (
-    <html lang={lang} className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-screen bg-[#050505] flex flex-col font-sans text-white">
         <Navbar />
         {children}

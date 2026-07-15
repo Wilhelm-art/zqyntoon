@@ -83,7 +83,35 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
   }, [slug, lang]);
 
   if (isLoading) {
-    return <div className="flex-1 flex items-center justify-center min-h-[50vh] text-white/50">{lang === 'id' ? 'Memuat data manga...' : 'Loading manga data...'}</div>;
+    return (
+      <main className="flex-1">
+        <section className="relative">
+          <div className="h-[40vh] md:h-[50vh] w-full bg-[#121212] animate-pulse" />
+          <div className="container mx-auto px-4 relative z-30 -mt-32 md:-mt-48 flex flex-col md:flex-row gap-6 md:gap-10">
+            <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 aspect-[2/3] rounded-lg bg-[#1a1a1a] animate-pulse" />
+            <div className="flex flex-col justify-end pb-4 space-y-4 flex-1">
+              <div className="h-10 bg-white/5 rounded animate-pulse w-3/4" />
+              <div className="h-4 bg-white/5 rounded animate-pulse w-1/2" />
+              <div className="flex gap-2">
+                <div className="h-6 w-20 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-6 w-20 bg-white/5 rounded-full animate-pulse" />
+              </div>
+              <div className="flex gap-3">
+                <div className="h-12 w-48 bg-white/10 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="container mx-auto px-4 py-12">
+          <div className="h-6 w-40 bg-white/5 rounded animate-pulse mb-6" />
+          <div className="space-y-2">
+            {Array.from({length:8}).map((_,i) => (
+              <div key={i} className="h-16 bg-white/5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (!manga) return <div className="text-center py-20 text-white">Manga not found</div>;
@@ -134,7 +162,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Link 
-                href={chapters.length > 0 ? `/manga/${manga.slug}/chapter-${chapters[chapters.length-1].id}` : '#'}
+                href={chapters.length > 0 ? `/manga/${manga.slug}/chapter-${chapters[chapters.length - 1].id}` : '#'}
                 className="bg-[#F27D26] hover:bg-[#ff9d5c] text-black text-center px-8 py-3 rounded-md font-bold text-sm transition-colors"
               >
                 {lang === 'id' ? 'BACA CHAPTER PERTAMA' : 'READ FIRST CHAPTER'}

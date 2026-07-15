@@ -68,22 +68,34 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-zinc-400 bg-[#050505] h-screen">
-        {lang === 'id' ? 'Memuat halaman...' : 'Loading pages...'}
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#050505] min-h-screen gap-4">
+        <div className="w-10 h-10 border-2 border-[#F27D26] border-t-transparent rounded-full animate-spin" />
+        <p className="text-white/40 text-sm font-mono tracking-widest uppercase">
+          {lang === 'id' ? 'Memuat halaman...' : 'Loading pages...'}
+        </p>
       </div>
     );
   }
 
   if (error || !manga || pages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 bg-[#050505] h-screen">
-        <p className="mb-4">{error || (lang === 'id' ? "Chapter tidak ditemukan." : "Chapter not found.")}</p>
-        <Link 
-          href={`/manga/${slug}`}
-          className="bg-[#F27D26] text-black px-4 py-2 rounded-md font-bold text-sm"
-        >
-          {lang === 'id' ? 'Kembali ke Seri' : 'Return to Series'}
-        </Link>
+      <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 bg-[#050505] min-h-screen gap-4">
+        <div className="text-4xl">😞</div>
+        <p className="text-center max-w-sm px-4">{error || (lang === 'id' ? "Chapter tidak ditemukan atau tidak tersedia." : "Chapter not found or unavailable.")}</p>
+        <div className="flex gap-3">
+          <Link 
+            href={`/manga/${slug}`}
+            className="bg-[#F27D26] text-black px-6 py-2 rounded-md font-bold text-sm"
+          >
+            {lang === 'id' ? 'Kembali ke Seri' : 'Return to Series'}
+          </Link>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-md font-bold text-sm transition-colors"
+          >
+            {lang === 'id' ? 'Coba Lagi' : 'Retry'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -141,6 +153,12 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
                 alt={`Page ${index + 1}`}
                 className="w-full h-auto"
                 loading={index < 3 ? "eager" : "lazy"}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.minHeight = '200px';
+                  target.style.background = '#1a1a1a';
+                  target.alt = `Page ${index + 1} — Failed to load`;
+                }}
               />
             ))}
           </div>

@@ -8,16 +8,17 @@ export default function Latest() {
   const { lang } = useLanguageStore();
   const [mangaList, setMangaList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const LIMIT = 30;
 
   const loadData = async (currentOffset: number, append = false) => {
     try {
       if (!append) setIsLoading(true);
-      // Fetch latest updates using order parameter for manga
+      else setIsLoadingMore(true);
       const rawLatest = await getMangaList({ limit: LIMIT, offset: currentOffset, includes: ['cover_art', 'author'] });
-      // To strictly match "Latest Updates", ideally we'd pass `order[updatedAt]=desc` to getMangaList.
-      // Assuming getMangaList allows it or returns decent results for now.
+      if (!rawLatest || rawLatest.length < LIMIT) setHasMore(false);
       
       const mapData = async (mdData: any) => {
         if (!mdData || !Array.isArray(mdData)) return [];
@@ -29,6 +30,11 @@ export default function Latest() {
           if (m.attributes.title) {
               title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
           }
+
+          const genres = m.attributes.tags
+            ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
+            .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name || {})[0])
+            .slice(0, 3) || [];
             
           const coverUrl = await getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName, title as string);
             
@@ -40,7 +46,7 @@ export default function Latest() {
             author: author?.attributes?.name || 'Unknown Author', 
             rating: null,
             status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
-            genres: [],
+            genres,
             synopsis: ''
           };
         }));
@@ -52,6 +58,7 @@ export default function Latest() {
       console.error(error);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -73,9 +80,15 @@ export default function Latest() {
         </h1>
       </div>
 
-      {isLoading && mangaList.length === 0 ? (
-        <div className="flex items-center justify-center min-h-[30vh] text-white/50">
-          {lang === 'id' ? 'Memuat data manga...' : 'Loading manga data...'}
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <div className="aspect-[3/4] rounded-lg bg-[#1a1a1a] animate-pulse" />
+              <div className="h-4 bg-white/5 rounded animate-pulse" />
+              <div className="h-3 w-2/3 bg-white/5 rounded animate-pulse" />
+            </div>
+          ))}
         </div>
       ) : (
         <>
@@ -85,14 +98,21 @@ export default function Latest() {
             ))}
           </div>
           
-          <div className="mt-12 flex justify-center">
-             <button 
+          {hasMore && (
+            <div className="mt-12 flex justify-center">
+              <button 
                 onClick={handleLoadMore}
-                className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-full font-bold text-sm transition-colors border border-white/10"
-             >
-                {lang === 'id' ? 'Muat Lebih Banyak' : 'Load More'}
-             </button>
-          </div>
+                disabled={isLoadingMore}
+                className="bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white px-8 py-3 rounded-full font-bold text-sm transition-colors border border-white/10 flex items-center gap-2"
+              >
+                {isLoadingMore ? (
+                  <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block" />{lang === 'id' ? 'Memuat...' : 'Loading...'}</>
+                ) : (
+                  lang === 'id' ? 'Muat Lebih Banyak' : 'Load More'
+                )}
+              </button>
+            </div>
+          )}
         </>
       )}
     </main>
