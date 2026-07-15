@@ -111,7 +111,8 @@ export function Navbar() {
                           className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0"
                         >
                           <img 
-                            src={getCoverUrl(manga.id, coverArt?.attributes?.fileName)} 
+                            src={getCoverUrl(manga.id, coverArt?.attributes?.fileName) || "/cover-placeholder.svg"}
+                            //(manga.id, coverArt?.attributes?.fileName)} 
                             alt={title}
                             className="w-8 h-12 object-cover rounded bg-white/5"
                             loading="lazy"

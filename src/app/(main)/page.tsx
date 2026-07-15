@@ -2,49 +2,11 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { getMangaList, getCoverUrl } from "@/lib/api/mangadex";
+import { getMangaList, getCoverUrlWithFallback } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import Link from "next/link";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect } from "react";
-
-// Map MangaDex API format to our internal Manga format
-const mapMangaDexData = (mdData: any) => {
-  if (!mdData || !Array.isArray(mdData)) return [];
-  
-  return mdData.map((m: any) => {
-    const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
-    const author = m.relationships.find((r: any) => r.type === 'author');
-    
-    // Safely parse title falling back to any available localized object keys
-    let title = 'Unknown Title';
-    if (m.attributes.title) {
-        title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
-    }
-    
-    let description = 'No synopsis available.';
-    if (m.attributes.description && typeof m.attributes.description === 'object') {
-        description = m.attributes.description.en || m.attributes.description.id || Object.values(m.attributes.description)[0] || description;
-    }
-    
-    const genres = m.attributes.tags
-      .filter((t: any) => t.attributes.group === 'genre' || t.attributes.group === 'theme')
-      .map((t: any) => t.attributes.name.en || Object.values(t.attributes.name)[0])
-      .slice(0, 3);
-      
-    return {
-      id: m.id,
-      title: title,
-      slug: m.id, 
-      cover_url: getCoverUrl(m.id, coverArt?.attributes?.fileName),
-      author: author?.attributes?.name || 'Unknown Author', 
-      rating: null,
-      status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
-      genres: genres.length > 0 ? genres : ['Manga'],
-      synopsis: description
-    };
-  });
-};
 
 export default function Home() {
   const { lang } = useLanguageStore();
@@ -52,21 +14,59 @@ export default function Home() {
   const [latestManga, setLatestManga] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const rawTrending = await getMangaList({ limit: 10, offset: 0, includes: ['cover_art', 'author'] });
+      const rawLatest = await getMangaList({ limit: 10, offset: 20, includes: ['cover_art', 'author'] });
+      
+      const mapData = async (mdData: any) => {
+        if (!mdData || !Array.isArray(mdData)) return [];
+        return Promise.all(mdData.map(async (m: any) => {
+          const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
+          const author = m.relationships.find((r: any) => r.type === 'author');
+          
+          let title = 'Unknown Title';
+          if (m.attributes.title) {
+              title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
+          }
+          
+          let description = 'No synopsis available.';
+          if (m.attributes.description && typeof m.attributes.description === 'object') {
+              description = m.attributes.description.en || m.attributes.description.id || Object.values(m.attributes.description)[0] || description;
+          }
+          
+          const genres = m.attributes.tags
+            .filter((t: any) => t.attributes.group === 'genre' || t.attributes.group === 'theme')
+            .map((t: any) => t.attributes.name.en || Object.values(t.attributes.name)[0])
+            .slice(0, 3);
+            
+          const coverUrl = await getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName, title as string);
+            
+          return {
+            id: m.id,
+            title,
+            slug: m.id, 
+            cover_url: coverUrl,
+            author: author?.attributes?.name || 'Unknown Author', 
+            rating: null,
+            status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
+            genres: genres.length > 0 ? genres : ['Manga'],
+            synopsis: description
+          };
+        }));
+      };
+
+      setTrendingManga(await mapData(rawTrending));
+      setLatestManga(await mapData(rawLatest));
+    } catch (error) {
+      console.error("Failed to load manga:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        const rawTrending = await getMangaList({ limit: 10, offset: 0, includes: ['cover_art', 'author'] });
-        const rawLatest = await getMangaList({ limit: 10, offset: 20, includes: ['cover_art', 'author'] });
-        
-        setTrendingManga(mapMangaDexData(rawTrending));
-        setLatestManga(mapMangaDexData(rawLatest));
-      } catch (error) {
-        console.error("Failed to load manga:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadData();
   }, []);
 
@@ -78,7 +78,6 @@ export default function Home() {
 
   return (
     <main className="flex-1 container mx-auto px-4 py-8">
-      {/* Hero Section */}
       {heroManga && (
         <section className="mb-12">
           <div className="relative rounded-2xl overflow-hidden aspect-[21/9] md:aspect-[21/7] bg-[#121212]">
@@ -109,7 +108,7 @@ export default function Home() {
                 <Link href={`/manga/${heroManga.slug}`} className="bg-white text-black px-6 py-2 rounded-md font-bold text-sm hover:bg-zinc-200 transition-colors">
                   {lang === 'id' ? 'MULAI BACA' : 'START READING'}
                 </Link>
-                <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors">
+                <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors opacity-50 cursor-not-allowed pointer-events-none">
                   + {lang === 'id' ? 'SIMPAN' : 'WISHLIST'}
                 </button>
               </div>
@@ -118,11 +117,10 @@ export default function Home() {
         </section>
       )}
 
-      {/* Trending Section */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Sedang Populer' : 'Trending Now'}</h2>
-          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
+          <a className="text-[#F27D26] text-xs font-semibold opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {trendingManga.map((manga: any) => (
@@ -131,11 +129,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Latest Updates Section */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Pembaruan Terbaru' : 'Latest Updates'}</h2>
-          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
+          <a className="text-[#F27D26] text-xs font-semibold opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {latestManga.map((manga: any) => (
@@ -144,14 +141,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Genres Section */}
       <section>
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Jelajahi Genre' : 'Browse Genres'}</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           {["Action", "Romance", "Fantasy", "Sci-Fi", "Horror", "Comedy", "Slice of Life", "Mystery", "Drama", "Supernatural"].map(genre => (
-            <button key={genre} className="px-4 py-2 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors">
+            <button key={genre} className="px-4 py-2 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">
               {genre}
             </button>
           ))}

@@ -3,11 +3,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import Link from "next/link";
-import { getMangaDetails, getMangaChapters, getCoverUrl } from "@/lib/api/mangadex";
+import { getMangaDetails, getMangaChapters, getCoverUrlWithFallback } from "@/lib/api/mangadex";
 import { ChevronRight } from "lucide-react";
 import { useLanguageStore } from "@/store/languageStore";
-import { useState, useEffect } from "react";
-import { use } from "react";
+import { useState, useEffect, use } from "react";
 
 export default function Series({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -44,11 +43,13 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           .map((t: any) => t.attributes.name.en || Object.values(t.attributes.name)[0])
           .slice(0, 4);
 
+        const coverUrl = await getCoverUrlWithFallback(mangaData.id, coverArt?.attributes?.fileName, title as string);
+
         setManga({
           id: mangaData.id,
           title,
           slug: mangaData.id,
-          cover_url: getCoverUrl(mangaData.id, coverArt?.attributes?.fileName),
+          cover_url: coverUrl,
           author: author?.attributes?.name || 'Unknown Author',
           rating: null,
           status: mangaData.attributes?.status?.toUpperCase() || 'UNKNOWN',
@@ -67,7 +68,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
               title: ch.attributes.title || `Chapter ${ch.attributes.chapter}`,
               published_at: ch.attributes.readableAt || ch.attributes.publishAt,
               scanlator: group?.attributes?.name || 'Official', 
-              views: Math.floor(Math.random() * 100000).toLocaleString()
+              views: null
             };
           });
 
@@ -102,7 +103,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
         </div>
 
         <div className="container mx-auto px-4 relative z-30 -mt-32 md:-mt-48 flex flex-col md:flex-row gap-6 md:gap-10">
-          <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 shadow-2xl shadow-black rounded-lg overflow-hidden border border-white/10">
+          <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 shadow-2xl shadow-black rounded-lg overflow-hidden border border-white/10 bg-[#121212]">
             <img 
               src={manga.cover_url}
               alt={manga.title}
@@ -116,10 +117,6 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
             </h1>
             
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm">
-              <span className="flex items-center gap-1 text-[#F27D26] font-bold">
-                ★ {manga.rating}
-              </span>
-              <span className="text-white/40">•</span>
               <span className="text-white/80">{manga.author}</span>
               <span className="text-white/40">•</span>
               <span className={manga.status === "ONGOING" ? "text-green-400" : "text-blue-400"}>
@@ -142,7 +139,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
               >
                 {lang === 'id' ? 'BACA CHAPTER PERTAMA' : 'READ FIRST CHAPTER'}
               </Link>
-              <button className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-md font-bold text-sm transition-colors">
+              <button className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-md font-bold text-sm transition-colors opacity-50 cursor-not-allowed pointer-events-none">
                 + {lang === 'id' ? 'SIMPAN' : 'WISHLIST'}
               </button>
             </div>
@@ -157,7 +154,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           <h3 className="text-lg font-medium text-white mb-4 border-b border-white/10 pb-2">
             {lang === 'id' ? 'Sinopsis' : 'Synopsis'}
           </h3>
-          <p className="text-white/70 text-sm leading-relaxed">
+          <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">
             {manga.synopsis}
           </p>
         </div>

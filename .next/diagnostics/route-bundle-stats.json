@@ -1,11 +1,11 @@
 [
   {
     "route": "/manga/[slug]/chapter-[id]",
-    "firstLoadUncompressedJsBytes": 569124,
+    "firstLoadUncompressedJsBytes": 569925,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
-      ".next\\static\\chunks\\25azxjjue12g8.js",
+      ".next\\static\\chunks\\0njftf0oqpen9.js",
       ".next\\static\\chunks\\3f6ol0y3t5xu3.js",
       ".next\\static\\chunks\\01dkdyukbdpqq.js",
       ".next\\static\\chunks\\27jktro2p5rq9.js",
@@ -16,12 +16,12 @@
   },
   {
     "route": "/manga/[slug]",
-    "firstLoadUncompressedJsBytes": 542427,
+    "firstLoadUncompressedJsBytes": 543123,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
-      ".next\\static\\chunks\\25azxjjue12g8.js",
-      ".next\\static\\chunks\\2p3soh48z7lxj.js",
+      ".next\\static\\chunks\\0njftf0oqpen9.js",
+      ".next\\static\\chunks\\1okz2ob-_7de-.js",
       ".next\\static\\chunks\\01dkdyukbdpqq.js",
       ".next\\static\\chunks\\27jktro2p5rq9.js",
       ".next\\static\\chunks\\07u_h6i539_wj.js",
@@ -31,12 +31,12 @@
   },
   {
     "route": "/",
-    "firstLoadUncompressedJsBytes": 541898,
+    "firstLoadUncompressedJsBytes": 542908,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\05-c3ty_6dwfk.js",
       ".next\\static\\chunks\\14mrh2-p_w84d.js",
-      ".next\\static\\chunks\\25azxjjue12g8.js",
-      ".next\\static\\chunks\\04_hwg8tgthr-.js",
+      ".next\\static\\chunks\\0njftf0oqpen9.js",
+      ".next\\static\\chunks\\1ijhojok4qhrp.js",
       ".next\\static\\chunks\\01dkdyukbdpqq.js",
       ".next\\static\\chunks\\27jktro2p5rq9.js",
       ".next\\static\\chunks\\07u_h6i539_wj.js",

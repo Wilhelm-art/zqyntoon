@@ -2,16 +2,11 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
-
-// Since MangaDex is blocked by internetbaik for standard Telkomsel users,
-// but works for users using 1.1.1.1/Google DNS, we proxy the requests through Next.js serverless functions.
-// Vercel's Edge/Serverless functions naturally use unrestricted global DNS resolvers, completely bypassing Telkomsel's block.
-// This means users don't have to manually configure 1.1.1.1 — it will just work for everyone!
+import { getAniListCover } from './anilist';
 
 const isClient = typeof window !== 'undefined';
 const getBaseUrl = () => {
     if (!isClient) return 'https://api.mangadex.org';
-    // When called from browser (client-side), proxy through our API to bypass DNS blocks
     return '/api/proxy?url=' + encodeURIComponent('https://api.mangadex.org');
 };
 
@@ -20,10 +15,22 @@ const buildUrl = (path: string) => {
     return `/api/proxy?url=${encodeURIComponent(`https://api.mangadex.org${path}`)}`;
 }
 
-// Helper function to extract cover art from relationships
 export const getCoverUrl = (mangaId: string, fileName?: string) => {
-  if (!fileName) return 'https://mangadex.org/title/placeholder.png'; // Fallback
+  if (!fileName) return null; 
   return `https://uploads.mangadex.org/covers/${mangaId}/${fileName}`;
+};
+
+export const getCoverUrlWithFallback = async (mangaId: string, fileName?: string, title?: string) => {
+  if (fileName) {
+    return getCoverUrl(mangaId, fileName);
+  }
+  
+  if (title) {
+    const aniListCover = await getAniListCover(title);
+    if (aniListCover) return aniListCover;
+  }
+
+  return '/cover-placeholder.svg';
 };
 
 export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_art', 'author'] }) => {
