@@ -1,7 +1,7 @@
 {
-  "/[lang]/manga/[slug]/chapter-[id]/page": "/[lang]/manga/[slug]/chapter-[id]",
-  "/[lang]/manga/[slug]/page": "/[lang]/manga/[slug]",
-  "/[lang]/page": "/[lang]",
+  "/(main)/manga/[slug]/chapter-[id]/page": "/manga/[slug]/chapter-[id]",
+  "/(main)/manga/[slug]/page": "/manga/[slug]",
+  "/(main)/page": "/",
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/favicon.ico/route": "/favicon.ico"

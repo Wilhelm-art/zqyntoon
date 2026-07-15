@@ -23,34 +23,30 @@
   },
   "dynamicRoutes": [
     {
-      "page": "/[lang]",
-      "regex": "^/([^/]+?)(?:/)?$",
+      "page": "/manga/[slug]",
+      "regex": "^/manga/([^/]+?)(?:/)?$",
       "routeKeys": {
-        "nxtPlang": "nxtPlang"
-      },
-      "namedRegex": "^/(?<nxtPlang>[^/]+?)(?:/)?$"
-    },
-    {
-      "page": "/[lang]/manga/[slug]",
-      "regex": "^/([^/]+?)/manga/([^/]+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPlang": "nxtPlang",
         "nxtPslug": "nxtPslug"
       },
-      "namedRegex": "^/(?<nxtPlang>[^/]+?)/manga/(?<nxtPslug>[^/]+?)(?:/)?$"
+      "namedRegex": "^/manga/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
-      "page": "/[lang]/manga/[slug]/chapter-[id]",
-      "regex": "^/([^/]+?)/manga/([^/]+?)/([^/]+?)(?:/)?$",
+      "page": "/manga/[slug]/chapter-[id]",
+      "regex": "^/manga/([^/]+?)/([^/]+?)(?:/)?$",
       "routeKeys": {
-        "nxtPlang": "nxtPlang",
         "nxtPslug": "nxtPslug",
         "nxtPid": "nxtPid"
       },
-      "namedRegex": "^/(?<nxtPlang>[^/]+?)/manga/(?<nxtPslug>[^/]+?)/(?<nxtPid>[^/]+?)(?:/)?$"
+      "namedRegex": "^/manga/(?<nxtPslug>[^/]+?)/(?<nxtPid>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
     {
       "page": "/_global-error",
       "regex": "^/_global\\-error(?:/)?$",

@@ -1,0 +1,3 @@
+{
+  "/(main)/manga/[slug]/chapter-[id]/page": "app/(main)/manga/[slug]/chapter-[id]/page.js"
+}

@@ -1,7 +1,14 @@
 import axios from 'axios';
+import https from 'https';
+
+// Configure axios with a custom agent to bypass strict SSL verification issues occasionally thrown by MangaDex's altnames CDN routing during Next.js SSG builds
+const agent = new https.Agent({  
+  rejectUnauthorized: false
+});
 
 const api = axios.create({
   baseURL: 'https://api.mangadex.org',
+  httpsAgent: agent
 });
 
 // Helper function to extract cover art from relationships
