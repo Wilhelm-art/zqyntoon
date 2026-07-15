@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
+    "array-buffer-to-hex": "^1.0.0",
     "axios": "^1.18.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
