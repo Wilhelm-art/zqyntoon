@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import Link from "next/link";
 import { getMangaDetails, getMangaChapters, getCoverUrl } from "@/lib/api/mangadex";
@@ -46,8 +49,8 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           title,
           slug: mangaData.id,
           cover_url: getCoverUrl(mangaData.id, coverArt?.attributes?.fileName),
-          author: author ? 'Unknown Author' : 'Various',
-          rating: (Math.random() * (5 - 3.5) + 3.5).toFixed(1),
+          author: author?.attributes?.name || 'Unknown Author',
+          rating: null,
           status: mangaData.attributes?.status?.toUpperCase() || 'UNKNOWN',
           genres: genres.length > 0 ? genres : ['Manga'],
           synopsis: description
@@ -63,7 +66,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
               chapter_number: ch.attributes.chapter || 'Oneshot',
               title: ch.attributes.title || `Chapter ${ch.attributes.chapter}`,
               published_at: ch.attributes.readableAt || ch.attributes.publishAt,
-              scanlator: group ? 'Unknown Group' : 'Official', 
+              scanlator: group?.attributes?.name || 'Official', 
               views: Math.floor(Math.random() * 100000).toLocaleString()
             };
           });

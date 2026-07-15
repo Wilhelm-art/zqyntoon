@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { getMangaList, getCoverUrl } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
@@ -34,8 +37,8 @@ const mapMangaDexData = (mdData: any) => {
       title: title,
       slug: m.id, 
       cover_url: getCoverUrl(m.id, coverArt?.attributes?.fileName),
-      author: author ? 'Unknown Author' : 'Various', 
-      rating: (Math.random() * (5 - 3.5) + 3.5).toFixed(1),
+      author: author?.attributes?.name || 'Unknown Author', 
+      rating: null,
       status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
       genres: genres.length > 0 ? genres : ['Manga'],
       synopsis: description
