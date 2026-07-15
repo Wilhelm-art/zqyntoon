@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { getMangaList, getCoverUrlWithFallback } from "@/lib/api/mangadex";
+import { getMangaList, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import Link from "next/link";
 import { useLanguageStore } from "@/store/languageStore";
@@ -26,10 +26,7 @@ export default function Home() {
           const coverArt = m.relationships?.find((r: any) => r.type === 'cover_art');
           const author = m.relationships?.find((r: any) => r.type === 'author');
           
-          let title = 'Unknown Title';
-          if (m.attributes.title) {
-              title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
-          }
+          const title = getMangaTitle(m);
           
           let description = 'No synopsis available.';
           if (m.attributes.description && typeof m.attributes.description === 'object') {

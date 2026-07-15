@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import Link from "next/link";
-import { getMangaDetails, getMangaChapters, getCoverUrlWithFallback } from "@/lib/api/mangadex";
+import { getMangaDetails, getMangaChapters, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { ChevronRight, Globe, ExternalLink } from "lucide-react";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, use } from "react";
@@ -31,10 +31,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
         const coverArt = mangaData.relationships?.find((r: any) => r.type === 'cover_art');
         const author = mangaData.relationships?.find((r: any) => r.type === 'author');
 
-        let title = 'Unknown Title';
-        if (mangaData.attributes.title) {
-          title = mangaData.attributes.title.en || mangaData.attributes.title.id || Object.values(mangaData.attributes.title)[0] as string || title;
-        }
+        const title = getMangaTitle(mangaData);
 
         let description = 'No synopsis available.';
         if (mangaData.attributes.description && typeof mangaData.attributes.description === 'object') {

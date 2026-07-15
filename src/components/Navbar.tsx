@@ -6,7 +6,7 @@ import { Search, Globe, X } from "lucide-react";
 import Link from "next/link";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, useRef } from "react";
-import { searchManga, getCoverUrlWithFallback } from "@/lib/api/mangadex";
+import { searchManga, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { useRouter, usePathname } from "next/navigation";
 
 export function Navbar() {
@@ -84,8 +84,7 @@ export function Navbar() {
   };
 
   const SearchResultItem = ({ manga, onSelect }: { manga: any; onSelect: () => void }) => {
-    const titleKey = manga.attributes.title ? Object.keys(manga.attributes.title)[0] : null;
-    const title = titleKey ? manga.attributes.title.en || manga.attributes.title[titleKey] : "Unknown";
+    const title = getMangaTitle(manga);
     const coverArt = manga.relationships?.find((r: any) => r.type === "cover_art");
 
     return (

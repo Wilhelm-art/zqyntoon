@@ -1,5 +1,5 @@
 "use client";
-import { getMangaByTag, getCoverUrlWithFallback, GENRE_TAG_MAP } from "@/lib/api/mangadex";
+import { getMangaByTag, GENRE_TAG_MAP, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, use } from "react";
@@ -41,10 +41,7 @@ export default function GenrePage({ params }: { params: Promise<{ slug: string }
           const coverArt = m.relationships?.find((r: any) => r.type === 'cover_art');
           const author = m.relationships?.find((r: any) => r.type === 'author');
 
-          let title = 'Unknown Title';
-          if (m.attributes?.title) {
-            title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] as string || title;
-          }
+          const title = getMangaTitle(m);
 
           const genres = m.attributes?.tags
             ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')

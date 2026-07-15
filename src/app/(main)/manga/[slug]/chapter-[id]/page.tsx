@@ -4,7 +4,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getMangaDetails, getChapterPages } from "@/lib/api/mangadex";
+import { getMangaDetails, getChapterPages, getMangaTitle } from "@/lib/api/mangadex";
 import { ChevronLeft, Menu, Settings, Columns, AlignJustify } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { use } from "react";
@@ -50,8 +50,7 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
           getChapterPages(id) // Pass the raw MangaDex chapter UUID
         ]);
         
-        const titleKey = Object.keys(mangaData.attributes.title)[0];
-        const title = mangaData.attributes.title.en || mangaData.attributes.title[titleKey];
+        const title = getMangaTitle(mangaData);
         
         setManga({ title, slug });
         setPages(pagesData);

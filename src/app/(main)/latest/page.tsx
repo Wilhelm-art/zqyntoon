@@ -1,5 +1,5 @@
 "use client";
-import { getMangaList, getCoverUrlWithFallback } from "@/lib/api/mangadex";
+import { getMangaList, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect } from "react";
@@ -26,10 +26,7 @@ export default function Latest() {
           const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
           const author = m.relationships.find((r: any) => r.type === 'author');
           
-          let title = 'Unknown Title';
-          if (m.attributes.title) {
-              title = m.attributes.title.en || m.attributes.title.id || Object.values(m.attributes.title)[0] || title;
-          }
+          const title = getMangaTitle(m);
 
           const genres = m.attributes.tags
             ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')

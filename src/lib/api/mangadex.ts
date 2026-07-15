@@ -47,6 +47,37 @@ export const getCoverUrlWithFallback = (mangaId: string, fileName?: string | nul
   return getCoverUrl(mangaId, fileName) ?? '/cover-placeholder.svg';
 };
 
+/**
+ * Extracts the best English title for a manga.
+ * MangaDex often stores the English title in altTitles if the main title is romaji.
+ */
+export const getMangaTitle = (manga: any): string => {
+  if (!manga?.attributes) return "Unknown";
+  
+  // 1. Try main title 'en'
+  if (manga.attributes.title?.en) {
+    return manga.attributes.title.en;
+  }
+  
+  // 2. Try altTitles 'en'
+  if (Array.isArray(manga.attributes.altTitles)) {
+    const enAltTitle = manga.attributes.altTitles.find((alt: any) => alt.en);
+    if (enAltTitle) {
+      return enAltTitle.en;
+    }
+  }
+  
+  // 3. Fallback to whatever the main title is
+  if (manga.attributes.title) {
+    const firstKey = Object.keys(manga.attributes.title)[0];
+    if (firstKey) {
+      return manga.attributes.title[firstKey];
+    }
+  }
+  
+  return "Unknown";
+};
+
 export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_art', 'author'] }) => {
   const params = new URLSearchParams();
   params.append('limit', limit.toString());
