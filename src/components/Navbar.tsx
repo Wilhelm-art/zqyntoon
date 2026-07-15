@@ -1,7 +1,17 @@
-import { Search } from "lucide-react";
+"use client";
+import { Search, Globe } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function Navbar({ lang = "id" }: { lang?: string }) {
+  const pathname = usePathname();
+  
+  const switchLangUrl = (targetLang: string) => {
+    if (!pathname) return `/${targetLang}`;
+    // Replace the first segment (/id or /en) with targetLang
+    return pathname.replace(/^\/(id|en)/, `/${targetLang}`);
+  };
+  
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -24,7 +34,25 @@ export function Navbar({ lang = "id" }: { lang?: string }) {
           <button className="md:hidden text-white/60 hover:text-white transition-colors" aria-label="Search">
             <Search className="w-5 h-5" />
           </button>
-          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#F27D26] to-[#ff9d5c] flex items-center justify-center text-xs font-bold text-black cursor-pointer">
+          
+          <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+            <Globe className="w-4 h-4 text-white/60" />
+            <Link 
+              href={switchLangUrl("id")} 
+              className={`text-xs font-bold transition-colors ${lang === 'id' ? 'text-[#F27D26]' : 'text-white/40 hover:text-white'}`}
+            >
+              ID
+            </Link>
+            <span className="text-white/20 text-xs">/</span>
+            <Link 
+              href={switchLangUrl("en")} 
+              className={`text-xs font-bold transition-colors ${lang === 'en' ? 'text-[#F27D26]' : 'text-white/40 hover:text-white'}`}
+            >
+              EN
+            </Link>
+          </div>
+          
+          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#F27D26] to-[#ff9d5c] flex items-center justify-center text-xs font-bold text-black cursor-pointer ml-2">
             JD
           </div>
         </div>
