@@ -133,7 +133,7 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
         <div className="max-w-3xl mx-auto p-8 border-t border-white/10 text-center">
           <p className="mb-4 text-[11px] font-mono text-white/40 uppercase tracking-widest">End of Chapter {chapterNumber}</p>
           <Link 
-            href={`/manga/${manga.slug}/chapter-${Number(chapterNumber) + 1}`}
+            href={`/${lang}/manga/${manga.slug}/chapter-${Number(chapterNumber) + 1}`}
             className="inline-block bg-[#F27D26] hover:bg-[#ff9d5c] text-black font-bold py-3 px-8 rounded-md transition-colors text-sm"
           >
             NEXT CHAPTER

@@ -52,7 +52,7 @@ export default async function Series({ params }: { params: Promise<{ slug: strin
             </div>
             
             <Link 
-              href={chapters.length > 0 ? `/manga/${manga.slug}/chapter-${chapters[chapters.length-1].chapter_number}` : '#'}
+              href={chapters.length > 0 ? `/${lang}/manga/${manga.slug}/chapter-${chapters[chapters.length-1].chapter_number}` : '#'}
               className="w-full bg-[#F27D26] hover:bg-[#ff9d5c] text-black py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors text-sm"
             >
               READ FIRST CHAPTER
