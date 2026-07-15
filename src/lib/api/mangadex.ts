@@ -1,23 +1,21 @@
 import axios from 'axios';
-import https from 'https';
 
-// Vercel serverless edge functions naturally bypass local Indonesian ISP (Telkomsel) DNS spoofing 
-// because they run on AWS/Vercel datacenters with their own global DNS resolvers (like 1.1.1.1).
-// However, when users fetch client-side, we must route them through a clean proxy or strictly rely on SSR
-// Right now, we fetch client-side in useEffect, which exposes Indonesian users to Telkomsel's internetbaik block.
+// Since MangaDex is blocked by internetbaik for standard Telkomsel users,
+// but works for users using 1.1.1.1/Google DNS, we proxy the requests through Next.js serverless functions.
+// Vercel's Edge/Serverless functions naturally use unrestricted global DNS resolvers, completely bypassing Telkomsel's block.
+// This means users don't have to manually configure 1.1.1.1 — it will just work for everyone!
 
-// The solution:
-// 1. Force the baseUrl to use Vercel's backend as a proxy if we wanted client-side, OR
-// 2. We can use Cloudflare's 1.1.1.1 DoH (DNS over HTTPS) resolver, but browsers don't allow custom DNS for fetch().
-// 3. MangaDex officially recommends using their CORS proxy or keeping requests server-side.
+const isClient = typeof window !== 'undefined';
+const getBaseUrl = () => {
+    if (!isClient) return 'https://api.mangadex.org';
+    // When called from browser (client-side), proxy through our API to bypass DNS blocks
+    return '/api/proxy?url=' + encodeURIComponent('https://api.mangadex.org');
+};
 
-// Since the user asked to "let it run if visitors to my website use Cloudflare (1.1.1.1) or Google (Public DNS)"
-// I will keep the direct API endpoint, but remove the insecure `rejectUnauthorized: false` hack which was masking the error,
-// and let the browser's native DNS resolution handle it. If they have 1.1.1.1 configured, it will work natively.
-
-const api = axios.create({
-  baseURL: 'https://api.mangadex.org',
-});
+const buildUrl = (path: string) => {
+    if (!isClient) return `https://api.mangadex.org${path}`;
+    return `/api/proxy?url=${encodeURIComponent(`https://api.mangadex.org${path}`)}`;
+}
 
 // Helper function to extract cover art from relationships
 export const getCoverUrl = (mangaId: string, fileName?: string) => {
@@ -35,7 +33,8 @@ export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_
   params.append('availableTranslatedLanguage[]', 'en');
   params.append('availableTranslatedLanguage[]', 'id');
 
-  const { data } = await api.get(`/manga?${params.toString()}`);
+  const response = await fetch(buildUrl(`/manga?${params.toString()}`));
+  const data = await response.json();
   return data.data;
 };
 
@@ -43,7 +42,8 @@ export const getMangaDetails = async (id: string) => {
   const params = new URLSearchParams();
   ['cover_art', 'author', 'artist'].forEach(inc => params.append('includes[]', inc));
 
-  const { data } = await api.get(`/manga/${id}?${params.toString()}`);
+  const response = await fetch(buildUrl(`/manga/${id}?${params.toString()}`));
+  const data = await response.json();
   return data.data;
 };
 
@@ -52,14 +52,16 @@ export const getMangaChapters = async (id: string, languages = ['en', 'id']) => 
   languages.forEach(lang => params.append('translatedLanguage[]', lang));
   params.append('order[chapter]', 'desc');
   params.append('includes[]', 'scanlation_group');
-  params.append('limit', '500'); // Fetch more chapters to ensure we get the right language
+  params.append('limit', '500'); 
 
-  const { data } = await api.get(`/manga/${id}/feed?${params.toString()}`);
+  const response = await fetch(buildUrl(`/manga/${id}/feed?${params.toString()}`));
+  const data = await response.json();
   return data.data;
 };
 
 export const getChapterPages = async (chapterId: string) => {
-  const { data } = await api.get(`/at-home/server/${chapterId}`);
+  const response = await fetch(buildUrl(`/at-home/server/${chapterId}`));
+  const data = await response.json();
   const baseUrl = data.baseUrl;
   const hash = data.chapter.hash;
   const pages = data.chapter.data; 
@@ -74,6 +76,7 @@ export const searchManga = async (title: string) => {
   params.append('contentRating[]', 'safe');
   params.append('contentRating[]', 'suggestive');
 
-  const { data } = await api.get(`/manga?${params.toString()}`);
+  const response = await fetch(buildUrl(`/manga?${params.toString()}`));
+  const data = await response.json();
   return data.data;
 };

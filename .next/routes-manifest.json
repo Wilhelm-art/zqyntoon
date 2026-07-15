@@ -60,6 +60,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/api/proxy",
+      "regex": "^/api/proxy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/proxy(?:/)?$"
+    },
+    {
       "page": "/favicon.ico",
       "regex": "^/favicon\\.ico(?:/)?$",
       "routeKeys": {},
