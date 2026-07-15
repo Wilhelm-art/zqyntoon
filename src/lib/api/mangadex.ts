@@ -130,8 +130,9 @@ export const getMangaChapters = async (id: string, languages = ['en', 'id']) => 
   const data = await response.json();
 
   const chapters = data.data ?? [];
-  // Filter out external chapters (Manga Plus, Shonen Jump, etc.) — no pages on MangaDex
-  return chapters.filter((ch: any) => !ch.attributes?.externalUrl);
+  // We no longer filter out external chapters completely.
+  // We return them so the UI can link them directly to the official source.
+  return chapters;
 };
 
 /**

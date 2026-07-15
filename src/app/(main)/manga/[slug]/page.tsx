@@ -4,7 +4,7 @@
 "use client";
 import Link from "next/link";
 import { getMangaDetails, getMangaChapters, getCoverUrlWithFallback } from "@/lib/api/mangadex";
-import { ChevronRight, Globe } from "lucide-react";
+import { ChevronRight, Globe, ExternalLink } from "lucide-react";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, use } from "react";
 
@@ -70,6 +70,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
             title: ch.attributes.title || null,
             published_at: ch.attributes.readableAt || ch.attributes.publishAt,
             scanlator: group?.attributes?.name || 'Official',
+            externalUrl: ch.attributes.externalUrl || null,
           };
         };
 
@@ -284,32 +285,44 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
                 </p>
               </div>
             ) : (
-              chapters.map((chapter: any) => (
-                <Link
-                  key={chapter.id}
-                  href={`/manga/${manga.slug}/chapter-${chapter.id}`}
-                  className="flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-                    <span className="font-bold text-white group-hover:text-[#F27D26] transition-colors">
-                      {lang === 'id' ? 'Chapter' : 'Ch.'} {chapter.chapter_number}
-                    </span>
-                    {chapter.title && chapter.title !== `Chapter ${chapter.chapter_number}` && (
-                      <>
-                        <span className="hidden md:inline text-white/20">—</span>
-                        <span className="text-white/60 text-sm">{chapter.title}</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="hidden sm:flex flex-col items-end text-xs text-white/40">
-                      <span>{chapter.scanlator}</span>
-                      <span>{chapter.published_at ? new Date(chapter.published_at).toLocaleDateString() : '—'}</span>
+              chapters.map((chapter: any) => {
+                const isExternal = !!chapter.externalUrl;
+                const chapterHref = isExternal 
+                  ? chapter.externalUrl 
+                  : `/manga/${manga.slug}/chapter-${chapter.id}`;
+
+                return (
+                  <Link
+                    key={chapter.id}
+                    href={chapterHref}
+                    target={isExternal ? "_blank" : undefined}
+                    rel={isExternal ? "noopener noreferrer" : undefined}
+                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+                      <span className="font-bold text-white group-hover:text-[#F27D26] transition-colors flex items-center gap-2">
+                        {lang === 'id' ? 'Chapter' : 'Ch.'} {chapter.chapter_number}
+                        {isExternal && <ExternalLink className="w-3 h-3 text-[#F27D26]" />}
+                      </span>
+                      {chapter.title && chapter.title !== `Chapter ${chapter.chapter_number}` && (
+                        <>
+                          <span className="hidden md:inline text-white/20">—</span>
+                          <span className="text-white/60 text-sm">{chapter.title}</span>
+                        </>
+                      )}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-[#F27D26]" />
-                  </div>
-                </Link>
-              ))
+                    <div className="flex items-center gap-6">
+                      <div className="hidden sm:flex flex-col items-end text-xs text-white/40">
+                        <span className={isExternal ? "text-[#F27D26]" : ""}>
+                          {isExternal ? "Official Link" : chapter.scanlator}
+                        </span>
+                        <span>{chapter.published_at ? new Date(chapter.published_at).toLocaleDateString() : '—'}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-[#F27D26]" />
+                    </div>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>
