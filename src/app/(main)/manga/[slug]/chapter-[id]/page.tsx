@@ -1,14 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getMangaDetails, getChapterPages, getCoverUrl } from "@/lib/api/mangadex";
+import { getMangaDetails, getChapterPages } from "@/lib/api/mangadex";
 import { ChevronLeft, Menu, Settings, Columns, AlignJustify } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { use } from "react";
+import { useLanguageStore } from "@/store/languageStore";
 
 export default function Reader({ params }: { params: Promise<{ slug: string, id: string }> }) {
   const { slug, id } = use(params);
-  const lang = 'id';
+  const { lang } = useLanguageStore();
   
   const [viewMode, setViewMode] = useState<"vertical" | "paged">("vertical");
   const [currentPage, setCurrentPage] = useState(0);
@@ -53,19 +54,19 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
         setPages(pagesData);
       } catch (err) {
         console.error(err);
-        setError("Failed to load chapter data. The chapter might be region-locked or unavailable.");
+        setError(lang === 'id' ? "Gagal memuat data chapter. Chapter mungkin dibatasi wilayah." : "Failed to load chapter data. The chapter might be region-locked.");
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchData();
-  }, [slug, id]);
+  }, [slug, id, lang]);
 
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center text-zinc-400 bg-[#050505] h-screen">
-        Loading pages...
+        {lang === 'id' ? 'Memuat halaman...' : 'Loading pages...'}
       </div>
     );
   }
@@ -73,12 +74,12 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
   if (error || !manga || pages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 bg-[#050505] h-screen">
-        <p className="mb-4">{error || "Chapter not found or no pages available."}</p>
+        <p className="mb-4">{error || (lang === 'id' ? "Chapter tidak ditemukan." : "Chapter not found.")}</p>
         <Link 
           href={`/manga/${slug}`}
           className="bg-[#F27D26] text-black px-4 py-2 rounded-md font-bold text-sm"
         >
-          Return to Series
+          {lang === 'id' ? 'Kembali ke Seri' : 'Return to Series'}
         </Link>
       </div>
     );
@@ -100,7 +101,7 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
             </Link>
             <div>
               <h1 className="font-serif italic font-light tracking-tight text-white line-clamp-1 text-lg">{manga.title}</h1>
-              <p className="text-[10px] font-mono text-white/40 uppercase">Reading Mode</p>
+              <p className="text-[10px] font-mono text-white/40 uppercase">{lang === 'id' ? 'Mode Baca' : 'Reading Mode'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -164,7 +165,7 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
       {viewMode === "paged" && (
         <div className="fixed bottom-0 left-0 right-0 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/10 h-16 flex items-center justify-center px-4">
           <div className="text-[11px] font-mono text-white/40 uppercase tracking-widest">
-            Page {currentPage + 1} / {pages.length}
+            {lang === 'id' ? 'Halaman' : 'Page'} {currentPage + 1} / {pages.length}
           </div>
         </div>
       )}
@@ -172,12 +173,12 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
       {/* Next Chapter Prompt (Vertical Mode) */}
       {viewMode === "vertical" && (
         <div className="max-w-3xl mx-auto p-8 border-t border-white/10 text-center">
-          <p className="mb-4 text-[11px] font-mono text-white/40 uppercase tracking-widest">End of Chapter</p>
+          <p className="mb-4 text-[11px] font-mono text-white/40 uppercase tracking-widest">{lang === 'id' ? 'Akhir Chapter' : 'End of Chapter'}</p>
           <Link 
             href={`/manga/${manga.slug}`}
             className="inline-block bg-[#F27D26] hover:bg-[#ff9d5c] text-black font-bold py-3 px-8 rounded-md transition-colors text-sm"
           >
-            RETURN TO SERIES
+            {lang === 'id' ? 'KEMBALI KE SERI' : 'RETURN TO SERIES'}
           </Link>
         </div>
       )}

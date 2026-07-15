@@ -1,6 +1,9 @@
+"use client";
 import { getMangaList, getCoverUrl } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import Link from "next/link";
+import { useLanguageStore } from "@/store/languageStore";
+import { useState, useEffect } from "react";
 
 // Map MangaDex API format to our internal Manga format
 const mapMangaDexData = (mdData: any) => {
@@ -40,18 +43,35 @@ const mapMangaDexData = (mdData: any) => {
   });
 };
 
-export default async function Home({ params }: { params?: any }) {
-  const lang = 'id';
-  
-  // Fetch real data from MangaDex
-  // We use different offsets to mock 'Trending' vs 'Latest' for now
-  const rawTrending = await getMangaList({ limit: 10, offset: 0 });
-  const rawLatest = await getMangaList({ limit: 10, offset: 20 });
-  
-  const trendingManga = mapMangaDexData(rawTrending);
-  const latestManga = mapMangaDexData(rawLatest);
-  
+export default function Home() {
+  const { lang } = useLanguageStore();
+  const [trendingManga, setTrendingManga] = useState<any[]>([]);
+  const [latestManga, setLatestManga] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const rawTrending = await getMangaList({ limit: 10, offset: 0, includes: ['cover_art', 'author'] });
+        const rawLatest = await getMangaList({ limit: 10, offset: 20, includes: ['cover_art', 'author'] });
+        
+        setTrendingManga(mapMangaDexData(rawTrending));
+        setLatestManga(mapMangaDexData(rawLatest));
+      } catch (error) {
+        console.error("Failed to load manga:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   const heroManga = trendingManga.length > 0 ? trendingManga[0] : null;
+
+  if (isLoading) {
+    return <div className="flex-1 flex items-center justify-center min-h-[50vh] text-white/50">{lang === 'id' ? 'Memuat data manga...' : 'Loading manga data...'}</div>;
+  }
 
   return (
     <main className="flex-1 container mx-auto px-4 py-8">
@@ -67,7 +87,9 @@ export default async function Home({ params }: { params?: any }) {
             />
             <div className="relative z-20 h-full flex flex-col justify-center p-6 md:p-10 w-full md:w-2/3 space-y-3">
               <div className="flex gap-2 mb-2">
-                <span className="bg-[#F27D26] text-black text-[10px] font-bold px-2 py-0.5 rounded">TRENDING #1</span>
+                <span className="bg-[#F27D26] text-black text-[10px] font-bold px-2 py-0.5 rounded">
+                  {lang === 'id' ? 'POPULER #1' : 'TRENDING #1'}
+                </span>
                 {heroManga.genres[0] && (
                   <span className="bg-white/10 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
                     {heroManga.genres[0]}
@@ -82,10 +104,10 @@ export default async function Home({ params }: { params?: any }) {
               </p>
               <div className="flex gap-4 pt-2">
                 <Link href={`/manga/${heroManga.slug}`} className="bg-white text-black px-6 py-2 rounded-md font-bold text-sm hover:bg-zinc-200 transition-colors">
-                  START READING
+                  {lang === 'id' ? 'MULAI BACA' : 'START READING'}
                 </Link>
                 <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors">
-                  + WISHLIST
+                  + {lang === 'id' ? 'SIMPAN' : 'WISHLIST'}
                 </button>
               </div>
             </div>
@@ -96,8 +118,8 @@ export default async function Home({ params }: { params?: any }) {
       {/* Trending Section */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">Trending Now</h2>
-          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">VIEW ALL</a>
+          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Sedang Populer' : 'Trending Now'}</h2>
+          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {trendingManga.map((manga: any) => (
@@ -109,8 +131,8 @@ export default async function Home({ params }: { params?: any }) {
       {/* Latest Updates Section */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">Latest Updates</h2>
-          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">VIEW ALL</a>
+          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Pembaruan Terbaru' : 'Latest Updates'}</h2>
+          <a href="#" className="text-[#F27D26] text-xs font-semibold hover:underline">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {latestManga.map((manga: any) => (
@@ -122,7 +144,7 @@ export default async function Home({ params }: { params?: any }) {
       {/* Genres Section */}
       <section>
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">Browse Genres</h2>
+          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Jelajahi Genre' : 'Browse Genres'}</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           {["Action", "Romance", "Fantasy", "Sci-Fi", "Horror", "Comedy", "Slice of Life", "Mystery", "Drama", "Supernatural"].map(genre => (

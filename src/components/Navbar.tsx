@@ -1,10 +1,10 @@
 "use client";
 import { Search, Globe } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useLanguageStore } from "@/store/languageStore";
 
 export function Navbar() {
-  const [lang, setLang] = useState("id");
+  const { lang, setLang } = useLanguageStore();
   
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]">
@@ -14,15 +14,27 @@ export function Navbar() {
         </Link>
         
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
-          <Link href="/" className="text-white border-b-2 border-[#F27D26] pb-1">Home</Link>
-          <Link href="/" className="hover:text-white transition-colors">Trending</Link>
-          <Link href="/" className="hover:text-white transition-colors">Latest</Link>
-          <Link href="/" className="hover:text-white transition-colors">Genres</Link>
+          <Link href="/" className="text-white border-b-2 border-[#F27D26] pb-1">
+            {lang === 'id' ? 'Beranda' : 'Home'}
+          </Link>
+          <Link href="/" className="hover:text-white transition-colors">
+            {lang === 'id' ? 'Populer' : 'Trending'}
+          </Link>
+          <Link href="/" className="hover:text-white transition-colors">
+            {lang === 'id' ? 'Terbaru' : 'Latest'}
+          </Link>
+          <Link href="/" className="hover:text-white transition-colors">
+            {lang === 'id' ? 'Genre' : 'Genres'}
+          </Link>
         </div>
 
         <div className="flex items-center gap-6">
           <div className="relative hidden md:block">
-            <input type="text" placeholder="Search manga..." className="bg-white/5 border border-white/10 rounded-full py-1.5 px-4 text-xs w-64 focus:outline-none focus:border-[#F27D26]/50 text-white placeholder-white/40" />
+            <input 
+              type="text" 
+              placeholder={lang === 'id' ? "Cari komik..." : "Search manga..."} 
+              className="bg-white/5 border border-white/10 rounded-full py-1.5 px-4 text-xs w-64 focus:outline-none focus:border-[#F27D26]/50 text-white placeholder-white/40" 
+            />
             <span className="absolute right-3 top-2 opacity-30 text-xs">⌘K</span>
           </div>
           <button className="md:hidden text-white/60 hover:text-white transition-colors" aria-label="Search">
