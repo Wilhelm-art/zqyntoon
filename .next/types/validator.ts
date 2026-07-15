@@ -146,6 +146,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/en-scraper/chapters/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/en-scraper/chapters">> = Specific
+  const handler = {} as typeof import("../../src/app/api/en-scraper/chapters/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/en-scraper/pages/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/en-scraper/pages">> = Specific
+  const handler = {} as typeof import("../../src/app/api/en-scraper/pages/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/en-scraper/search/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/en-scraper/search">> = Specific
+  const handler = {} as typeof import("../../src/app/api/en-scraper/search/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/id-scraper/chapters/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/id-scraper/chapters">> = Specific

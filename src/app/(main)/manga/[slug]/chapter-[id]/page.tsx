@@ -49,19 +49,28 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
         let mangaData: any = null;
 
         // Extract raw ID if it's from the scraper
-        const isScraper = id.startsWith('id-scraper:');
+        const isIdScraper = id.startsWith('id-scraper:');
+        const isEnScraper = id.startsWith('en-scraper:');
+        
         let rawId = id;
-        if (isScraper) {
+        if (isIdScraper) {
           const encodedEndpoint = id.replace('id-scraper:', '');
           try {
             rawId = Buffer.from(encodedEndpoint, 'base64').toString('utf-8');
           } catch (e) {
             rawId = encodedEndpoint; // Fallback just in case
           }
+        } else if (isEnScraper) {
+          const encodedEndpoint = id.replace('en-scraper:', '');
+          try {
+            rawId = Buffer.from(encodedEndpoint, 'base64').toString('utf-8');
+          } catch (e) {
+            rawId = encodedEndpoint; 
+          }
         }
 
-        if (isScraper) {
-          // Fetch pages from our scraper API
+        if (isIdScraper) {
+          // Fetch pages from our ID scraper API
           const [mangaRes, pagesRes] = await Promise.all([
             getMangaDetails(slug),
             fetch(`/api/id-scraper/pages?endpoint=${encodeURIComponent(rawId)}`)
@@ -73,9 +82,25 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
             const data = await pagesRes.json();
             pagesData = data.pages || [];
             
-            // Route through our proxy to avoid mixed-content or hotlink blocks
-            // Use a custom header to bypass if necessary, but standard proxy usually works
-            pagesData = pagesData.map(url => `/api/proxy?url=${encodeURIComponent(url)}`);
+            // Route through our proxy
+            pagesData = pagesData.map((url: string) => `/api/proxy?url=${encodeURIComponent(url)}`);
+          }
+        } else if (isEnScraper) {
+          // Fetch pages from our EN scraper API
+          const [mangaRes, pagesRes] = await Promise.all([
+            getMangaDetails(slug),
+            fetch(`/api/en-scraper/pages?chapterId=${encodeURIComponent(rawId)}`)
+          ]);
+          
+          mangaData = mangaRes;
+          
+          if (pagesRes.ok) {
+            const data = await pagesRes.json();
+            // Consumet returns array of { img: "url" } objects for MangaKakalot
+            pagesData = (data.pages || []).map((p: any) => p.img || p);
+            
+            // Route through our proxy
+            pagesData = pagesData.map((url: string) => `/api/proxy?url=${encodeURIComponent(url)}`);
           }
         } else {
           // Normal MangaDex fetch

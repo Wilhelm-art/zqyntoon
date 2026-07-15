@@ -76,6 +76,42 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           }
         }
 
+        // 3. Fetch from EN Scraper (Consumet) if language is 'en' and MangaDex has no chapters
+        const hasMangaDexEn = rawChapters.some((ch: any) => ch.attributes.translatedLanguage === 'en');
+        if (lang === 'en' && !hasMangaDexEn && title && title !== "Unknown") {
+          try {
+            const searchRes = await fetch(`/api/en-scraper/search?title=${encodeURIComponent(title)}`);
+            if (searchRes.ok) {
+              const searchData = await searchRes.json();
+              if (searchData.results && searchData.results.length > 0) {
+                const match = searchData.results[0];
+                const chaptersRes = await fetch(`/api/en-scraper/chapters?mangaId=${encodeURIComponent(match.id)}`);
+                if (chaptersRes.ok) {
+                  const chaptersData = await chaptersRes.json();
+                  if (chaptersData.chapters && chaptersData.chapters.length > 0) {
+                    const consumetChapters = chaptersData.chapters.map((ch: any) => {
+                       const safeId = Buffer.from(ch.id).toString('base64');
+                       return {
+                         id: `en-scraper:${safeId}`,
+                         chapter_number: ch.chapterNumber || ch.title?.replace(/[^0-9.]/g, '') || '0',
+                         title: ch.title || null,
+                         published_at: ch.releaseDate || new Date().toISOString(),
+                         scanlator: 'Consumet',
+                         externalUrl: null,
+                         isEnScraper: true
+                       };
+                    });
+                    
+                    finalChapters = [...finalChapters, ...consumetChapters];
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Failed to fetch from EN scraper', e);
+          }
+        }
+
         const genres = mangaData.attributes.tags
           ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
           .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name ?? {})[0])
@@ -103,9 +139,10 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
         let idChapters: any[] = [];
         let enChapters: any[] = [];
         
-        const isScraper = finalChapters.length > 0 && finalChapters[0].isScraper;
+        const isIdScraper = finalChapters.length > 0 && finalChapters[0].isScraper;
+        const isEnScraper = finalChapters.some((ch: any) => ch.isEnScraper);
         
-        if (isScraper) {
+        if (isIdScraper) {
             idChapters = finalChapters; // Scraper is 100% ID
             
             // Re-map the rawChapters just for EN fallback
@@ -123,15 +160,20 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
                  };
               });
         } else {
-            // Normal MangaDex mapping
+            // Normal MangaDex mapping for ID
             idChapters = finalChapters.filter((ch: any) => {
                 const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
                 return rawMatch && rawMatch.attributes.translatedLanguage === 'id';
             });
-            enChapters = finalChapters.filter((ch: any) => {
-                const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
-                return rawMatch && rawMatch.attributes.translatedLanguage === 'en';
-            });
+            
+            if (isEnScraper) {
+                enChapters = finalChapters.filter((ch: any) => ch.isEnScraper);
+            } else {
+                enChapters = finalChapters.filter((ch: any) => {
+                    const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
+                    return rawMatch && rawMatch.attributes.translatedLanguage === 'en';
+                });
+            }
         }
 
         setAllChapters({ en: enChapters, id: idChapters });
