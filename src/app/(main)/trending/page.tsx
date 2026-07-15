@@ -20,9 +20,9 @@ export default function Trending() {
       const rawTrending = await getMangaList({ limit: LIMIT, offset: currentOffset, includes: ['cover_art', 'author'] });
       if (!rawTrending || rawTrending.length < LIMIT) setHasMore(false);
       
-      const mapData = async (mdData: any) => {
+      const mapData = (mdData: any) => {
         if (!mdData || !Array.isArray(mdData)) return [];
-        return Promise.all(mdData.map(async (m: any) => {
+        return mdData.map((m: any) => {
           const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
           const author = m.relationships.find((r: any) => r.type === 'author');
           
@@ -36,7 +36,7 @@ export default function Trending() {
             .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name || {})[0])
             .slice(0, 3) || [];
             
-          const coverUrl = await getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName, title as string);
+          const coverUrl = getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName);
             
           return {
             id: m.id,
@@ -49,10 +49,10 @@ export default function Trending() {
             genres,
             synopsis: ''
           };
-        }));
+        });
       };
 
-      const newData = await mapData(rawTrending);
+      const newData = mapData(rawTrending);
       setMangaList(prev => append ? [...prev, ...newData] : newData);
     } catch (error) {
       console.error(error);

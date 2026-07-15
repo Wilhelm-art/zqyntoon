@@ -35,9 +35,9 @@ export default function GenrePage({ params }: { params: Promise<{ slug: string }
 
       if (!rawManga || rawManga.length < LIMIT) setHasMore(false);
 
-      const mapData = async (mdData: any[]) => {
+      const mapData = (mdData: any[]) => {
         if (!mdData || !Array.isArray(mdData)) return [];
-        return Promise.all(mdData.map(async (m: any) => {
+        return mdData.map((m: any) => {
           const coverArt = m.relationships?.find((r: any) => r.type === 'cover_art');
           const author = m.relationships?.find((r: any) => r.type === 'author');
 
@@ -51,7 +51,7 @@ export default function GenrePage({ params }: { params: Promise<{ slug: string }
             .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name || {})[0])
             .slice(0, 3) || [];
 
-          const coverUrl = await getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName, title);
+          const coverUrl = getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName);
 
           return {
             id: m.id,
@@ -64,10 +64,10 @@ export default function GenrePage({ params }: { params: Promise<{ slug: string }
             genres,
             synopsis: '',
           };
-        }));
+        });
       };
 
-      const newData = await mapData(rawManga);
+      const newData = mapData(rawManga ?? []);
       setMangaList(prev => append ? [...prev, ...newData] : newData);
     } catch (error) {
       console.error(error);

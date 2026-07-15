@@ -20,11 +20,11 @@ export default function Home() {
       const rawTrending = await getMangaList({ limit: 10, offset: 0, includes: ['cover_art', 'author'] });
       const rawLatest = await getMangaList({ limit: 10, offset: 20, includes: ['cover_art', 'author'] });
       
-      const mapData = async (mdData: any) => {
+      const mapData = (mdData: any) => {
         if (!mdData || !Array.isArray(mdData)) return [];
-        return Promise.all(mdData.map(async (m: any) => {
-          const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
-          const author = m.relationships.find((r: any) => r.type === 'author');
+        return mdData.map((m: any) => {
+          const coverArt = m.relationships?.find((r: any) => r.type === 'cover_art');
+          const author = m.relationships?.find((r: any) => r.type === 'author');
           
           let title = 'Unknown Title';
           if (m.attributes.title) {
@@ -36,12 +36,13 @@ export default function Home() {
               description = m.attributes.description.en || m.attributes.description.id || Object.values(m.attributes.description)[0] || description;
           }
           
-          const genres = m.attributes.tags
-            .filter((t: any) => t.attributes.group === 'genre' || t.attributes.group === 'theme')
-            .map((t: any) => t.attributes.name.en || Object.values(t.attributes.name)[0])
+          const genres = (m.attributes.tags ?? [])
+            .filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
+            .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name ?? {})[0])
             .slice(0, 3);
             
-          const coverUrl = await getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName, title as string);
+          // Synchronous — no await needed
+          const coverUrl = getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName);
             
           return {
             id: m.id,
@@ -54,11 +55,11 @@ export default function Home() {
             genres: genres.length > 0 ? genres : ['Manga'],
             synopsis: description
           };
-        }));
+        });
       };
 
-      setTrendingManga(await mapData(rawTrending));
-      setLatestManga(await mapData(rawLatest));
+      setTrendingManga(mapData(rawTrending));
+      setLatestManga(mapData(rawLatest));
     } catch (error) {
       console.error("Failed to load manga:", error);
     } finally {

@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from 'axios';
-import { getAniListCover } from './anilist';
 
 const isClient = typeof window !== 'undefined';
 
@@ -11,29 +9,30 @@ const buildUrl = (path: string) => {
     return `/api/proxy?url=${encodeURIComponent(`https://api.mangadex.org${path}`)}`;
 };
 
-export const getCoverUrl = (mangaId: string, fileName?: string) => {
-  if (!fileName) return null; 
-  return `https://uploads.mangadex.org/covers/${mangaId}/${fileName}`;
+/**
+ * Returns the MangaDex cover URL with .512.jpg quality suffix.
+ * Uses the manga ID + filename from the cover_art relationship.
+ */
+export const getCoverUrl = (mangaId: string, fileName?: string | null): string | null => {
+  if (!fileName) return null;
+  // .512.jpg = 512px wide thumbnail (faster load, correct aspect ratio)
+  return `https://uploads.mangadex.org/covers/${mangaId}/${fileName}.512.jpg`;
 };
 
-export const getCoverUrlWithFallback = async (mangaId: string, fileName?: string, title?: string) => {
-  if (fileName) {
-    return getCoverUrl(mangaId, fileName);
-  }
-  
-  if (title) {
-    const aniListCover = await getAniListCover(title);
-    if (aniListCover) return aniListCover;
-  }
-
-  return '/cover-placeholder.svg';
+/**
+ * Returns the best cover URL available.
+ * ONLY uses MangaDex cover (tied to specific manga by ID) — no AniList fallback
+ * which could match a different manga by similar title.
+ */
+export const getCoverUrlWithFallback = (mangaId: string, fileName?: string | null): string => {
+  return getCoverUrl(mangaId, fileName) ?? '/cover-placeholder.svg';
 };
 
 export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_art', 'author'] }) => {
   const params = new URLSearchParams();
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
-  includes.forEach(inc => params.append('includes[]', inc)); 
+  includes.forEach(inc => params.append('includes[]', inc));
   params.append('contentRating[]', 'safe');
   params.append('contentRating[]', 'suggestive');
   params.append('availableTranslatedLanguage[]', 'en');
@@ -42,7 +41,7 @@ export const getMangaList = async ({ limit = 20, offset = 0, includes = ['cover_
 
   const response = await fetch(buildUrl(`/manga?${params.toString()}`));
   const data = await response.json();
-  return data.data;
+  return data.data ?? [];
 };
 
 // MangaDex tag UUID map for genres
@@ -89,7 +88,7 @@ export const getMangaByTag = async ({
 
   const response = await fetch(buildUrl(`/manga?${params.toString()}`));
   const data = await response.json();
-  return data.data;
+  return data.data ?? [];
 };
 
 export const getMangaDetails = async (id: string) => {
@@ -106,21 +105,47 @@ export const getMangaChapters = async (id: string, languages = ['en', 'id']) => 
   languages.forEach(lang => params.append('translatedLanguage[]', lang));
   params.append('order[chapter]', 'desc');
   params.append('includes[]', 'scanlation_group');
-  params.append('limit', '500'); 
+  params.append('limit', '500');
 
   const response = await fetch(buildUrl(`/manga/${id}/feed?${params.toString()}`));
   const data = await response.json();
-  return data.data;
+
+  const chapters = data.data ?? [];
+
+  // Filter out external chapters (e.g. Manga Plus, Shonen Jump)
+  // These have no page data on MangaDex servers and cannot be read here
+  return chapters.filter((ch: any) => !ch.attributes?.externalUrl);
 };
 
-export const getChapterPages = async (chapterId: string) => {
+/**
+ * Fetch chapter pages from MangaDex at-home server.
+ * Returns array of full image URLs for this chapter.
+ */
+export const getChapterPages = async (chapterId: string): Promise<string[]> => {
   const response = await fetch(buildUrl(`/at-home/server/${chapterId}`));
+
+  if (!response.ok) {
+    throw new Error(`at-home server error: HTTP ${response.status}`);
+  }
+
   const data = await response.json();
-  const baseUrl = data.baseUrl;
-  const hash = data.chapter.hash;
-  const pages = data.chapter.data; 
-  
-  return pages.map((page: string) => `${baseUrl}/data/${hash}/${page}`);
+
+  // MangaDex API error response
+  if (data.result === 'error') {
+    const detail = data.errors?.[0]?.detail ?? 'Chapter unavailable';
+    throw new Error(detail);
+  }
+
+  // Missing required fields
+  if (!data.baseUrl || !data.chapter?.hash || !Array.isArray(data.chapter?.data)) {
+    throw new Error('Invalid chapter data received from server');
+  }
+
+  const baseUrl: string = data.baseUrl;
+  const hash: string = data.chapter.hash;
+  const pages: string[] = data.chapter.data;
+
+  return pages.map((page) => `${baseUrl}/data/${hash}/${page}`);
 };
 
 export const searchManga = async (title: string) => {
@@ -132,5 +157,5 @@ export const searchManga = async (title: string) => {
 
   const response = await fetch(buildUrl(`/manga?${params.toString()}`));
   const data = await response.json();
-  return data.data;
+  return data.data ?? [];
 };
