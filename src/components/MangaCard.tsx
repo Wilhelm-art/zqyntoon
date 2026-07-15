@@ -4,12 +4,13 @@ import { Star } from "lucide-react";
 
 interface MangaCardProps {
   manga: Manga;
+  lang?: string;
   key?: string | number;
 }
 
-export function MangaCard({ manga }: MangaCardProps) {
+export function MangaCard({ manga, lang = "id" }: MangaCardProps) {
   return (
-    <Link href={`/manga/${manga.slug}`} className="group flex flex-col gap-2 cursor-pointer">
+    <Link href={`/${lang}/manga/${manga.slug}`} className="group flex flex-col gap-2 cursor-pointer">
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#1a1a1a] border border-white/5">
         <img 
           src={manga.cover_url} 

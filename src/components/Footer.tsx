@@ -1,4 +1,4 @@
-export function Footer() {
+export function Footer({ lang = "id" }: { lang?: string }) {
   return (
     <footer className="w-full border-t border-white/10 bg-[#0A0A0A] mt-auto">
       <div className="container mx-auto px-4 py-8 md:py-12 flex flex-col md:flex-row justify-between items-center gap-6">

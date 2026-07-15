@@ -1,19 +1,19 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 
-export function Navbar() {
+export function Navbar({ lang = "id" }: { lang?: string }) {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-white">
+        <Link href={`/${lang}`} className="flex items-center gap-2 text-white">
           <div className="text-2xl font-black tracking-tighter text-[#F27D26]">ZYNQ<span className="text-white">TOON</span></div>
         </Link>
         
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
-          <Link href="/" className="text-white border-b-2 border-[#F27D26] pb-1">Home</Link>
-          <Link href="/" className="hover:text-white transition-colors">Trending</Link>
-          <Link href="/" className="hover:text-white transition-colors">Latest</Link>
-          <Link href="/" className="hover:text-white transition-colors">Genres</Link>
+          <Link href={`/${lang}`} className="text-white border-b-2 border-[#F27D26] pb-1">Home</Link>
+          <Link href={`/${lang}`} className="hover:text-white transition-colors">Trending</Link>
+          <Link href={`/${lang}`} className="hover:text-white transition-colors">Latest</Link>
+          <Link href={`/${lang}`} className="hover:text-white transition-colors">Genres</Link>
         </div>
 
         <div className="flex items-center gap-6">
