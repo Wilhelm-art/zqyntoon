@@ -1,23 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MOCK_PAGES, MOCK_MANGA, MOCK_CHAPTERS } from "@/data/mockData";
+import { getMangaDetails, getChapterPages, getCoverUrl } from "@/lib/api/mangadex";
 import { ChevronLeft, Menu, Settings, Columns, AlignJustify } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 import { use } from "react";
 
 export default function Reader({ params }: { params: Promise<{ slug: string, id: string, lang: string }> }) {
   const { slug, id, lang } = use(params);
-  const chapterId = `chapter-${id}`;
-    const [viewMode, setViewMode] = useState<"vertical" | "paged">("vertical");
+  
+  const [viewMode, setViewMode] = useState<"vertical" | "paged">("vertical");
   const [currentPage, setCurrentPage] = useState(0);
   const [showNav, setShowNav] = useState(true);
-
-  // In a real app, you would fetch based on chapterId, but for mock we'll just use sl-1
-  const pages = MOCK_PAGES["sl-1"] || [];
-  const manga = MOCK_MANGA.find(m => m.slug === slug);
-  const chapterNumber = id;
+  
+  const [manga, setManga] = useState<any>(null);
+  const [pages, setPages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Hide nav on scroll down, show on scroll up
   useEffect(() => {
@@ -35,10 +34,51 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
     return () => window.removeEventListener("scroll", handleScroll);
   }, [viewMode]);
 
-  if (!manga || pages.length === 0) {
+  // Fetch real data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        // Execute API calls in parallel
+        const [mangaData, pagesData] = await Promise.all([
+          getMangaDetails(slug),
+          getChapterPages(id) // Pass the raw MangaDex chapter UUID
+        ]);
+        
+        const titleKey = Object.keys(mangaData.attributes.title)[0];
+        const title = mangaData.attributes.title.en || mangaData.attributes.title[titleKey];
+        
+        setManga({ title, slug });
+        setPages(pagesData);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load chapter data. The chapter might be region-locked or unavailable.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [slug, id]);
+
+  if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-zinc-400 bg-zinc-950 h-screen">
-        Chapter not found
+      <div className="flex-1 flex items-center justify-center text-zinc-400 bg-[#050505] h-screen">
+        Loading pages...
+      </div>
+    );
+  }
+
+  if (error || !manga || pages.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 bg-[#050505] h-screen">
+        <p className="mb-4">{error || "Chapter not found or no pages available."}</p>
+        <Link 
+          href={`/${lang}/manga/${slug}`}
+          className="bg-[#F27D26] text-black px-4 py-2 rounded-md font-bold text-sm"
+        >
+          Return to Series
+        </Link>
       </div>
     );
   }
@@ -59,7 +99,7 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
             </Link>
             <div>
               <h1 className="font-serif italic font-light tracking-tight text-white line-clamp-1 text-lg">{manga.title}</h1>
-              <p className="text-[10px] font-mono text-white/40 uppercase">Chapter {chapterNumber}</p>
+              <p className="text-[10px] font-mono text-white/40 uppercase">Reading Mode</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -89,11 +129,11 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
       <div className={cn("mx-auto", viewMode === "vertical" ? "pt-16 pb-32 max-w-3xl" : "h-screen pt-16 pb-16 flex flex-col items-center justify-center")}>
         {viewMode === "vertical" ? (
           <div className="flex flex-col items-center w-full">
-            {pages.map((page, index) => (
+            {pages.map((pageUrl, index) => (
               <img 
-                key={page.id}
-                src={page.image_url} 
-                alt={`Page ${page.page_number}`}
+                key={index}
+                src={pageUrl} 
+                alt={`Page ${index + 1}`}
                 className="w-full h-auto"
                 loading={index < 3 ? "eager" : "lazy"}
               />
@@ -102,8 +142,8 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
         ) : (
           <div className="relative w-full h-full flex items-center justify-center p-4">
             <img 
-              src={pages[currentPage].image_url} 
-              alt={`Page ${pages[currentPage].page_number}`}
+              src={pages[currentPage]} 
+              alt={`Page ${currentPage + 1}`}
               className="max-w-full max-h-full object-contain"
             />
             {/* Click zones for paged mode */}
@@ -131,12 +171,12 @@ export default function Reader({ params }: { params: Promise<{ slug: string, id:
       {/* Next Chapter Prompt (Vertical Mode) */}
       {viewMode === "vertical" && (
         <div className="max-w-3xl mx-auto p-8 border-t border-white/10 text-center">
-          <p className="mb-4 text-[11px] font-mono text-white/40 uppercase tracking-widest">End of Chapter {chapterNumber}</p>
+          <p className="mb-4 text-[11px] font-mono text-white/40 uppercase tracking-widest">End of Chapter</p>
           <Link 
-            href={`/${lang}/manga/${manga.slug}/chapter-${Number(chapterNumber) + 1}`}
+            href={`/${lang}/manga/${manga.slug}`}
             className="inline-block bg-[#F27D26] hover:bg-[#ff9d5c] text-black font-bold py-3 px-8 rounded-md transition-colors text-sm"
           >
-            NEXT CHAPTER
+            RETURN TO SERIES
           </Link>
         </div>
       )}
