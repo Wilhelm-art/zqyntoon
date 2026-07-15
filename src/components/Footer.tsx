@@ -10,10 +10,10 @@ export function Footer() {
         <div className="text-2xl font-black tracking-tighter text-[#F27D26]">ZYNQ<span className="text-white">TOON</span></div>
         
         <div className="flex items-center gap-6 text-[9px] text-white/30 uppercase tracking-widest">
-          <a href="" className="hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'Tentang' : 'About'}</a>
-          <a href="" className="hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">DMCA</a>
-          <a href="" className="hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'Ketentuan' : 'Terms'}</a>
-          <a href="" className="hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'Privasi' : 'Privacy'}</a>
+          <a href="/about" className="hover:text-white transition-colors">{lang === 'id' ? 'Tentang' : 'About'}</a>
+          <a href="/about" className="hover:text-white transition-colors">DMCA</a>
+          <a href="/about" className="hover:text-white transition-colors">{lang === 'id' ? 'Ketentuan' : 'Terms'}</a>
+          <a href="/about" className="hover:text-white transition-colors">{lang === 'id' ? 'Privasi' : 'Privacy'}</a>
         </div>
         
         <p className="text-[10px] text-white/20">

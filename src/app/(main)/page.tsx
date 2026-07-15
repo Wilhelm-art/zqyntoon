@@ -120,7 +120,7 @@ export default function Home() {
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Sedang Populer' : 'Trending Now'}</h2>
-          <a className="text-[#F27D26] text-xs font-semibold opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
+          <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {trendingManga.map((manga: any) => (
@@ -132,7 +132,7 @@ export default function Home() {
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Pembaruan Terbaru' : 'Latest Updates'}</h2>
-          <a className="text-[#F27D26] text-xs font-semibold opacity-50 cursor-not-allowed pointer-events-none">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</a>
+          <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {latestManga.map((manga: any) => (
@@ -147,9 +147,9 @@ export default function Home() {
         </div>
         <div className="flex flex-wrap gap-3">
           {["Action", "Romance", "Fantasy", "Sci-Fi", "Horror", "Comedy", "Slice of Life", "Mystery", "Drama", "Supernatural"].map(genre => (
-            <button key={genre} className="px-4 py-2 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors opacity-50 cursor-not-allowed pointer-events-none">
+            <Link href={`/genre/${genre.toLowerCase().replace(/ /g, '-')}`} key={genre} className="px-4 py-2 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors border border-white/5">
               {genre}
-            </button>
+            </Link>
           ))}
         </div>
       </section>

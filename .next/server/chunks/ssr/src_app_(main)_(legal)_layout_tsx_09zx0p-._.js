@@ -1,0 +1,3 @@
+module.exports=[18297,a=>{"use strict";var b=a.i(7997);a.s(["default",0,function({children:a}){return(0,b.jsx)("main",{className:"flex-1 container mx-auto px-4 py-16",children:(0,b.jsx)("div",{className:"max-w-3xl mx-auto bg-[#121212] p-8 md:p-12 rounded-2xl border border-white/5 shadow-2xl shadow-black",children:a})})}])},17474,a=>{a.n(a.i(18297))}];
+
+//# sourceMappingURL=src_app_%28main%29_%28legal%29_layout_tsx_09zx0p-._.js.map
