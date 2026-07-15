@@ -2,5 +2,7 @@
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/favicon.ico/route": "/favicon.ico",
+  "/manga/[slug]/chapter-[id]/page": "/manga/[slug]/chapter-[id]",
+  "/manga/[slug]/page": "/manga/[slug]",
   "/page": "/"
 }

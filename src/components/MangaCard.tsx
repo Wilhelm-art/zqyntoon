@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Manga } from "../data/mockData";
 import { Star } from "lucide-react";
 
@@ -9,7 +9,7 @@ interface MangaCardProps {
 
 export function MangaCard({ manga }: MangaCardProps) {
   return (
-    <Link to={`/manga/${manga.slug}`} className="group flex flex-col gap-2 cursor-pointer">
+    <Link href={`/manga/${manga.slug}`} className="group flex flex-col gap-2 cursor-pointer">
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#1a1a1a] border border-white/5">
         <img 
           src={manga.cover_url} 

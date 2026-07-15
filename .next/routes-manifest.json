@@ -21,7 +21,25 @@
     "afterFiles": [],
     "fallback": []
   },
-  "dynamicRoutes": [],
+  "dynamicRoutes": [
+    {
+      "page": "/manga/[slug]",
+      "regex": "^/manga/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/manga/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/manga/[slug]/chapter-[id]",
+      "regex": "^/manga/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/manga/(?<nxtPslug>[^/]+?)/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
   "staticRoutes": [
     {
       "page": "/",
