@@ -10,8 +10,9 @@ export async function GET() {
       },
     });
   } catch (error: any) {
+    console.error("Trending comics error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to fetch popular comics", details: error?.message },
+      { error: "Failed to fetch popular comics" },
       { status: 500 }
     );
   }

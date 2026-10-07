@@ -91,7 +91,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
     <div className="min-h-screen pb-20">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
 
       {/* Hero Backdrop with Ambient Glow */}

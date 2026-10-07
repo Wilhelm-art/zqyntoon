@@ -1,20 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// SSRF & Open Proxy Protection: Strictly allowed upstream domains
+const ALLOWED_IMAGE_DOMAINS = [
+  "komiku.org",
+  "komiku.to",
+  "komiku.id",
+  "bacakomik.my",
+  "mangadex.org",
+  "mangadex.network",
+  "wp.com",
+  "blogspot.com",
+  "googleusercontent.com",
+];
+
+function isAllowedHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return ALLOWED_IMAGE_DOMAINS.some(
+    (domain) => lower === domain || lower.endsWith("." + domain)
+  );
+}
+
 // SSRF Protection: Deny private / internal network IPs and hostnames
 function isPrivateAddress(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
   if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.endsWith(".local") ||
-    hostname.endsWith(".internal")
+    lower === "localhost" ||
+    lower === "127.0.0.1" ||
+    lower === "0.0.0.0" ||
+    lower === "::1" ||
+    lower.endsWith(".local") ||
+    lower.endsWith(".internal") ||
+    lower.endsWith(".localhost")
   ) {
     return true;
   }
 
   // IPv4 private ranges check
   const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const match = hostname.match(ipv4Regex);
+  const match = lower.match(ipv4Regex);
   if (match) {
     const octet1 = parseInt(match[1], 10);
     const octet2 = parseInt(match[2], 10);
@@ -31,6 +54,11 @@ function isPrivateAddress(hostname: string): boolean {
     if (octet1 === 192 && octet2 === 168) return true;
     // 0.0.0.0
     if (octet1 === 0) return true;
+  }
+
+  // Deny raw numeric IP or hex notations like 2130706433 or 0x7f000001
+  if (/^\d+$/.test(lower) || /^0x[0-9a-f]+$/i.test(lower)) {
+    return true;
   }
 
   return false;
@@ -51,8 +79,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid protocol. Only http and https supported." }, { status: 400 });
     }
 
-    if (isPrivateAddress(parsedUrl.hostname)) {
-      return NextResponse.json({ error: "Access to private or restricted network address is denied." }, { status: 403 });
+    if (isPrivateAddress(parsedUrl.hostname) || !isAllowedHost(parsedUrl.hostname)) {
+      return NextResponse.json({ error: "Access to the requested host is denied." }, { status: 403 });
     }
 
     // Adaptive headers based on upstream host
@@ -71,16 +99,59 @@ export async function GET(request: NextRequest) {
       headers["Referer"] = "https://bacakomik.my/";
     }
 
-    const upstreamResponse = await fetch(parsedUrl.toString(), { headers });
+    // Fetch upstream with manual redirect to prevent SSRF redirect bypass
+    let upstreamResponse = await fetch(parsedUrl.toString(), {
+      headers,
+      redirect: "manual",
+    });
+
+    // Handle single safe redirect hop if upstream redirects within allowed domain
+    if ([301, 302, 307, 308].includes(upstreamResponse.status)) {
+      const redirectLocation = upstreamResponse.headers.get("location");
+      if (!redirectLocation) {
+        return NextResponse.json({ error: "Upstream redirect location missing." }, { status: 502 });
+      }
+      const redirectUrl = new URL(redirectLocation, parsedUrl.origin);
+      if (
+        (redirectUrl.protocol !== "http:" && redirectUrl.protocol !== "https:") ||
+        isPrivateAddress(redirectUrl.hostname) ||
+        !isAllowedHost(redirectUrl.hostname)
+      ) {
+        return NextResponse.json({ error: "Redirect to untrusted address is denied." }, { status: 403 });
+      }
+      upstreamResponse = await fetch(redirectUrl.toString(), {
+        headers,
+        redirect: "manual",
+      });
+    }
 
     if (!upstreamResponse.ok) {
       return NextResponse.json(
-        { error: `Upstream returned status ${upstreamResponse.status} ${upstreamResponse.statusText}` },
+        { error: `Upstream returned status ${upstreamResponse.status}` },
         { status: upstreamResponse.status }
       );
     }
 
-    const contentType = upstreamResponse.headers.get("content-type") || "image/jpeg";
+    // Verify Content-Type is an image
+    const rawContentType = upstreamResponse.headers.get("content-type") || "";
+    const isImage =
+      rawContentType.toLowerCase().startsWith("image/") ||
+      rawContentType.toLowerCase().includes("application/octet-stream");
+
+    if (!isImage) {
+      return NextResponse.json(
+        { error: "Invalid upstream content type. Only images are allowed." },
+        { status: 415 }
+      );
+    }
+
+    // Limit maximum image size to 15MB
+    const contentLength = upstreamResponse.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 15 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image exceeds 15MB limit." }, { status: 413 });
+    }
+
+    const contentType = rawContentType.startsWith("image/") ? rawContentType : "image/jpeg";
     const imageBuffer = await upstreamResponse.arrayBuffer();
 
     return new NextResponse(imageBuffer, {
@@ -94,8 +165,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err: any) {
+    console.error("Proxy error:", err?.message);
     return NextResponse.json(
-      { error: "Failed to proxy image", details: err?.message || String(err) },
+      {
+        error: "Failed to proxy image",
+        details: process.env.NODE_ENV === "development" ? err?.message : undefined,
+      },
       { status: 500 }
     );
   }

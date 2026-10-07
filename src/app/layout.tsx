@@ -116,7 +116,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://uploads.mangadex.org" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
       </head>
       <body className={`${plusJakartaSans.variable} font-sans min-h-screen flex flex-col bg-[#07080B] text-gray-100`}>

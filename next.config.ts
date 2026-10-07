@@ -14,11 +14,43 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "thumbnail.komiku.org",
+      },
+      {
+        protocol: "https",
+        hostname: "thumbnail.komiku.to",
+      },
+      {
+        protocol: "https",
+        hostname: "img.komiku.org",
+      },
+      {
+        protocol: "https",
+        hostname: "img.komiku.to",
+      },
+      {
+        protocol: "https",
+        hostname: "uploads.mangadex.org",
+      },
+      {
+        protocol: "https",
+        hostname: "*.mangadex.network",
+      },
+      {
+        protocol: "https",
+        hostname: "*.wp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "zynqtoon.vercel.app",
       },
       {
         protocol: "http",
-        hostname: "**",
+        hostname: "localhost",
       },
     ],
     dangerouslyAllowSVG: true,
@@ -45,6 +77,14 @@ const nextConfig: NextConfig = {
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
           },
         ],
       },
