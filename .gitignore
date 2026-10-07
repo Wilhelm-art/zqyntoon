@@ -44,3 +44,5 @@ scripts/inspect*.mjs
 supabase/.temp/
 test*.js
 test*.mjs
+PRD.md
+*.prd.md
