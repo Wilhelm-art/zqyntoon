@@ -1,10 +1,28 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Next.js Build Outputs & Cache
+.next/
+out/
 build/
 dist/
+
+# Development & Tooling caches
 coverage/
-.DS_Store
+.hermes/
 *.log
-.env*
+*.tsbuildinfo
+
+# Environment Variables
+.env*.local
+.env
 !.env.example
+
+# Vercel
 .vercel
-PRD.md
+
+# Operating System
+.DS_Store
+Thumbs.db

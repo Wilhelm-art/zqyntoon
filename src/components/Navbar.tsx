@@ -2,27 +2,28 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { Search, Globe, X } from "lucide-react";
 import Link from "next/link";
-import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect, useRef } from "react";
-import { searchManga, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { useRouter, usePathname } from "next/navigation";
+import { Search, X, Globe, Bookmark } from "lucide-react";
+import { searchManga, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
+import { useLanguageStore } from "@/store/languageStore";
 
 export function Navbar() {
-  const { lang, setLang } = useLanguageStore();
   const router = useRouter();
   const pathname = usePathname();
+  const { lang, setLang } = useLanguageStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle click outside to close dropdown
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -51,10 +52,21 @@ export function Navbar() {
   // Debounced search effect
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length >= 3) {
+      if (searchQuery.length >= 2) {
         setIsSearching(true);
         setShowDropdown(true);
         try {
+          if (lang === 'id') {
+            const res = await fetch(`/api/id-scraper/search?title=${encodeURIComponent(searchQuery)}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.results && data.results.length > 0) {
+                setSearchResults(data.results.slice(0, 6));
+                setIsSearching(false);
+                return;
+              }
+            }
+          }
           const results = await searchManga(searchQuery);
           setSearchResults(results.slice(0, 5));
         } catch (error) {
@@ -66,16 +78,17 @@ export function Navbar() {
         setSearchResults([]);
         setShowDropdown(false);
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, lang]);
 
   const navLinks = [
     { href: "/", label: lang === "id" ? "Beranda" : "Home" },
     { href: "/trending", label: lang === "id" ? "Populer" : "Trending" },
     { href: "/latest", label: lang === "id" ? "Terbaru" : "Latest" },
     { href: "/genre", label: lang === "id" ? "Genre" : "Genres" },
+    { href: "/bookmarks", label: lang === "id" ? "Koleksi Saya" : "Bookmarks" },
   ];
 
   const isActive = (href: string) => {
@@ -84,8 +97,13 @@ export function Navbar() {
   };
 
   const SearchResultItem = ({ manga, onSelect }: { manga: any; onSelect: () => void }) => {
-    const title = getMangaTitle(manga);
+    const isIdScraper = !!manga.endpoint || !!manga.image || manga.id?.startsWith?.('bk-') || manga.slug?.startsWith?.('bk-');
+    const title = isIdScraper ? manga.title : getMangaTitle(manga);
     const coverArt = manga.relationships?.find((r: any) => r.type === "cover_art");
+    const coverUrl = isIdScraper
+      ? (manga.image || manga.coverUrl || "/cover-placeholder.svg")
+      : getCoverUrlWithFallback(manga.id, coverArt?.attributes?.fileName);
+    const subtitle = isIdScraper ? "KOMIK INDO" : (manga.attributes?.status || "MANGA");
 
     return (
       <div
@@ -93,7 +111,7 @@ export function Navbar() {
         className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0"
       >
         <img
-          src={getCoverUrlWithFallback(manga.id, coverArt?.attributes?.fileName)}
+          src={coverUrl}
           alt={title}
           className="w-8 h-12 object-cover rounded bg-white/5 flex-shrink-0"
           loading="lazy"
@@ -101,7 +119,7 @@ export function Navbar() {
         />
         <div className="flex flex-col overflow-hidden">
           <span className="text-sm font-medium text-white truncate">{title}</span>
-          <span className="text-[10px] text-white/40 uppercase">{manga.attributes.status || "UNKNOWN"}</span>
+          <span className="text-[10px] text-[#F27D26] uppercase font-mono">{subtitle}</span>
         </div>
       </div>
     );
@@ -109,14 +127,14 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]">
+      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-white">
             <div className="text-2xl font-black tracking-tighter text-[#F27D26]">ZYNQ<span className="text-white">TOON</span></div>
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-white/70">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -139,7 +157,7 @@ export function Navbar() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === "id" ? "Cari komik..." : "Search manga..."}
+                placeholder={lang === "id" ? "Cari komik bahasa Indonesia..." : "Search manga..."}
                 className="bg-white/5 border border-white/10 rounded-full py-1.5 px-4 text-xs w-64 focus:outline-none focus:border-[#F27D26]/50 text-white placeholder-white/40"
               />
               {isSearching ? (
@@ -154,12 +172,12 @@ export function Navbar() {
                     <div className="flex flex-col">
                       {searchResults.map((manga) => (
                         <SearchResultItem
-                          key={manga.id}
+                          key={manga.id || manga.slug}
                           manga={manga}
                           onSelect={() => {
                             setShowDropdown(false);
                             setSearchQuery("");
-                            router.push(`/manga/${manga.id}`);
+                            router.push(`/manga/${manga.slug || manga.id}`);
                           }}
                         />
                       ))}
@@ -178,7 +196,7 @@ export function Navbar() {
             {/* Mobile Search Button */}
             <button
               className="md:hidden text-white/60 hover:text-white transition-colors"
-              aria-label="Search"
+              aria-label="Cari Komik"
               onClick={() => setShowMobileSearch(true)}
             >
               <Search className="w-5 h-5" />
@@ -215,7 +233,7 @@ export function Navbar() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === "id" ? "Cari komik..." : "Search manga..."}
+                placeholder={lang === "id" ? "Cari komik bahasa Indonesia..." : "Search manga..."}
                 className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 px-4 text-sm focus:outline-none focus:border-[#F27D26]/50 text-white placeholder-white/40"
               />
               {isSearching && (
@@ -231,17 +249,17 @@ export function Navbar() {
           </div>
 
           <div className="flex-1 overflow-y-auto bg-[#0A0A0A]">
-            {searchQuery.length >= 3 && (
+            {searchQuery.length >= 2 && (
               searchResults.length > 0 ? (
                 <div>
                   {searchResults.map((manga) => (
                     <SearchResultItem
-                      key={manga.id}
+                      key={manga.id || manga.slug}
                       manga={manga}
                       onSelect={() => {
                         setShowMobileSearch(false);
                         setSearchQuery("");
-                        router.push(`/manga/${manga.id}`);
+                        router.push(`/manga/${manga.slug || manga.id}`);
                       }}
                     />
                   ))}
@@ -252,14 +270,14 @@ export function Navbar() {
                 </div>
               ) : null
             )}
-            {searchQuery.length < 3 && searchQuery.length > 0 && (
+            {searchQuery.length < 2 && searchQuery.length > 0 && (
               <div className="p-8 text-center text-sm text-white/40">
-                {lang === "id" ? "Ketik minimal 3 karakter..." : "Type at least 3 characters..."}
+                {lang === "id" ? "Ketik minimal 2 karakter..." : "Type at least 2 characters..."}
               </div>
             )}
             {searchQuery.length === 0 && (
               <div className="p-8 text-center text-sm text-white/40">
-                {lang === "id" ? "Mulai ketik untuk mencari..." : "Start typing to search..."}
+                {lang === "id" ? "Mulai ketik untuk mencari komik..." : "Start typing to search..."}
               </div>
             )}
           </div>

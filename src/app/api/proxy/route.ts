@@ -3,6 +3,48 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
+const isPrivateIpOrHost = (hostname: string) => {
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') return true;
+  if (hostname === '169.254.169.254') return true; // Cloud metadata
+  if (/^10\./.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) return true;
+  return false;
+};
+
+const isAllowedHost = (hostname: string) => {
+  if (isPrivateIpOrHost(hostname)) return false;
+
+  const allowedDirectDomains = [
+    'api.mangadex.org',
+    'uploads.mangadex.org',
+    'bacakomik.my',
+    'meo.comick.pictures',
+  ];
+
+  if (allowedDirectDomains.some(d => hostname === d || hostname.endsWith(`.${d}`))) {
+    return true;
+  }
+
+  // MangaDex image network
+  if (hostname.endsWith('.mangadex.network')) return true;
+
+  // WordPress Photon CDN (used by Bacakomik covers: i0.wp.com, i2.wp.com)
+  if (hostname.endsWith('.wp.com')) return true;
+
+  // Comic chapter image CDNs used by Indonesian scanlations
+  if (
+    hostname.endsWith('.lol') ||
+    hostname.endsWith('.lat') ||
+    hostname.endsWith('.pics') ||
+    hostname.endsWith('.komikcdn.me')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const targetUrl = request.nextUrl.searchParams.get('url');
@@ -18,29 +60,47 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
     }
 
-    // We allow any external domain here because scrapers (Consumet, Komikcast) 
-    // use many unpredictable CDNs for images.
-    // However, we prevent localhost/internal proxying to be safe.
-    if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+    if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+      return NextResponse.json({ error: 'Invalid protocol' }, { status: 400 });
+    }
+
+    if (!isAllowedHost(urlObj.hostname)) {
       return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
     }
 
     // at-home/server URLs return time-limited CDN tokens — must NOT be cached
     const isAtHomeRequest = urlObj.pathname.includes('/at-home/server/');
-    // Cover images can be cached for 24h
-    const isCoverImage = urlObj.hostname === 'uploads.mangadex.org';
+    const isCoverImage = urlObj.hostname === 'uploads.mangadex.org' || urlObj.hostname.includes('wp.com');
+
+    // Context-aware Referer to bypass anti-hotlinking
+    const headers: Record<string, string> = {
+      'Accept': 'application/json, image/avif, image/webp, image/apng, image/*, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    };
+
+    if (
+      urlObj.hostname.includes('bacakomik') ||
+      urlObj.hostname.includes('wp.com') ||
+      urlObj.hostname.endsWith('.lol') ||
+      urlObj.hostname.endsWith('.lat') ||
+      urlObj.hostname.endsWith('.pics')
+    ) {
+      headers['Referer'] = 'https://bacakomik.my/';
+      headers['Origin'] = 'https://bacakomik.my';
+    } else if (urlObj.hostname.includes('comick')) {
+      headers['Referer'] = 'https://comick.io/';
+      headers['Origin'] = 'https://comick.io';
+    } else if (urlObj.hostname.includes('mangadex')) {
+      headers['Referer'] = 'https://mangadex.org/';
+      headers['Origin'] = 'https://mangadex.org';
+    }
 
     const response = await fetch(targetUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json, image/webp, image/*, */*',
-        'User-Agent': 'ZynqToon/1.0 (https://zynqtoon.vercel.app)',
-        'Referer': 'https://mangadex.org/',
-        'Origin': 'https://mangadex.org',
-      },
+      headers,
       ...(isAtHomeRequest
         ? { cache: 'no-store' }
-        : { next: { revalidate: isCoverImage ? 86400 : 60 } }),
+        : { next: { revalidate: isCoverImage ? 86400 : 3600 } }),
     });
 
     if (!response.ok) {
@@ -58,7 +118,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(buffer, {
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+          'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
         },
       });
     }

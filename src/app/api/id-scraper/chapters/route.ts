@@ -3,7 +3,7 @@ import { getChapters } from '@/lib/scraper/bacakomik';
 
 export async function GET(request: NextRequest) {
   try {
-    const endpoint = request.nextUrl.searchParams.get('endpoint');
+    const endpoint = request.nextUrl.searchParams.get('endpoint') || request.nextUrl.searchParams.get('slug');
     if (!endpoint) {
       return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 });
     }

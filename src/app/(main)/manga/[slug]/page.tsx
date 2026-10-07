@@ -4,13 +4,17 @@
 "use client";
 import Link from "next/link";
 import { getMangaDetails, getMangaChapters, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
-import { ChevronRight, Globe, ExternalLink } from "lucide-react";
+import { ChevronRight, Globe, BookX, Bookmark, BookmarkCheck } from "lucide-react";
 import { useLanguageStore } from "@/store/languageStore";
+import { useBookmarkStore } from "@/store/bookmarkStore";
+import { useHistoryStore } from "@/store/historyStore";
 import { useState, useEffect, use } from "react";
 
 export default function Series({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { lang } = useLanguageStore();
+  const { addBookmark, removeBookmark, isBookmarked } = useBookmarkStore();
+  const { getHistory } = useHistoryStore();
 
   const [manga, setManga] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -23,6 +27,56 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
     const fetchData = async () => {
       try {
         setIsLoading(true);
+
+        const decodedSlug = decodeURIComponent(slug);
+        const isBacakomik = 
+          decodedSlug.startsWith('bk-') || 
+          decodedSlug.startsWith('bk:') || 
+          decodedSlug.startsWith('id-scraper') || 
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decodedSlug);
+
+        // 1. Direct Indonesian Comic Fetch (Bacakomik)
+        if (isBacakomik) {
+          try {
+            const detailRes = await fetch(`/api/id-scraper/detail?slug=${encodeURIComponent(decodedSlug)}`);
+            if (detailRes.ok) {
+              const bkDetail = await detailRes.json();
+
+              setManga({
+                id: bkDetail.id,
+                title: bkDetail.title,
+                slug: bkDetail.slug,
+                cover_url: bkDetail.coverUrl,
+                author: bkDetail.author,
+                status: bkDetail.status,
+                genres: bkDetail.genres,
+                synopsis: bkDetail.synopsis,
+                source: 'bacakomik',
+              });
+
+              const idChapters = (bkDetail.chapters || []).map((ch: any) => ({
+                id: ch.id,
+                chapter_number: ch.chapter_number,
+                title: ch.title,
+                published_at: new Date().toISOString(),
+                scanlator: 'Komik Indo',
+                externalUrl: null,
+                isScraper: true,
+              }));
+
+              setChapters(idChapters);
+              setAllChapters({ en: [], id: idChapters });
+              setChapterLang('id');
+              setUsingFallbackLang(false);
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.warn('ID Scraper fetch failed, attempting MangaDex fallback:', e);
+          }
+        }
+
+        // 2. MangaDex with Automatic Indonesian Scraper Fallback
         const [mangaData, rawChapters] = await Promise.all([
           getMangaDetails(slug),
           getMangaChapters(slug, lang === 'id' ? ['id', 'en'] : ['en', 'id'])
@@ -32,41 +86,39 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
         const author = mangaData.relationships?.find((r: any) => r.type === 'author');
         const title = getMangaTitle(mangaData);
 
-        let description = 'No synopsis available.';
-        if (mangaData.attributes.description && typeof mangaData.attributes.description === 'object') {
-            description = mangaData.attributes.description.en || mangaData.attributes.description.id || Object.values(mangaData.attributes.description)[0] as string || description;
+        let description = 'Sinopsis komik belum tersedia.';
+        if (mangaData.attributes?.description && typeof mangaData.attributes.description === 'object') {
+            description = mangaData.attributes.description.id || mangaData.attributes.description.en || Object.values(mangaData.attributes.description)[0] as string || description;
         }
 
-        // 1. Process MangaDex Chapters
         let finalChapters = rawChapters.map((ch: any) => {
           const group = ch.relationships?.find((r: any) => r.type === 'scanlation_group');
           return {
             id: ch.id,
-            chapter_number: ch.attributes.chapter || 'Oneshot',
-            title: ch.attributes.title || null,
-            published_at: ch.attributes.readableAt || ch.attributes.publishAt,
+            chapter_number: ch.attributes?.chapter || 'Oneshot',
+            title: ch.attributes?.title || null,
+            published_at: ch.attributes?.readableAt || ch.attributes?.publishAt,
             scanlator: group?.attributes?.name || 'Official',
-            externalUrl: ch.attributes.externalUrl || null,
+            externalUrl: null,
           };
         });
 
-        // 2. Fetch from ID Scraper if language is 'id'
-        if (lang === 'id' && title && title !== "Unknown") {
+        // Search in ID Scraper to provide Indonesian chapters
+        if (title && title !== "Unknown") {
           try {
-            // Search for the manga title on our scraper
             const searchRes = await fetch(`/api/id-scraper/search?title=${encodeURIComponent(title)}`);
             if (searchRes.ok) {
               const searchData = await searchRes.json();
               if (searchData.results && searchData.results.length > 0) {
-                // Pick the first match
                 const match = searchData.results[0];
                 const chaptersRes = await fetch(`/api/id-scraper/chapters?endpoint=${encodeURIComponent(match.endpoint)}`);
                 if (chaptersRes.ok) {
                   const chaptersData = await chaptersRes.json();
                   if (chaptersData.chapters && chaptersData.chapters.length > 0) {
-                    // Prepend or replace? Let's just use the scraper chapters entirely for ID,
-                    // or combine them. Usually scraper is more complete for ID.
-                    finalChapters = chaptersData.chapters;
+                    finalChapters = chaptersData.chapters.map((ch: any) => ({
+                      ...ch,
+                      isScraper: true,
+                    }));
                   }
                 }
               }
@@ -76,48 +128,11 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           }
         }
 
-        // 3. Fetch from EN Scraper (Consumet) if language is 'en' and MangaDex has no chapters
-        const hasMangaDexEn = rawChapters.some((ch: any) => ch.attributes.translatedLanguage === 'en');
-        if (lang === 'en' && !hasMangaDexEn && title && title !== "Unknown") {
-          try {
-            const searchRes = await fetch(`/api/en-scraper/search?title=${encodeURIComponent(title)}`);
-            if (searchRes.ok) {
-              const searchData = await searchRes.json();
-              if (searchData.results && searchData.results.length > 0) {
-                const match = searchData.results[0];
-                const chaptersRes = await fetch(`/api/en-scraper/chapters?mangaId=${encodeURIComponent(match.id)}`);
-                if (chaptersRes.ok) {
-                  const chaptersData = await chaptersRes.json();
-                  if (chaptersData.chapters && chaptersData.chapters.length > 0) {
-                    const consumetChapters = chaptersData.chapters.map((ch: any) => {
-                       const safeId = Buffer.from(ch.id).toString('base64');
-                       return {
-                         id: `en-scraper:${safeId}`,
-                         chapter_number: ch.chapterNumber || ch.title?.replace(/[^0-9.]/g, '') || '0',
-                         title: ch.title || null,
-                         published_at: ch.releaseDate || new Date().toISOString(),
-                         scanlator: 'Consumet',
-                         externalUrl: null,
-                         isEnScraper: true
-                       };
-                    });
-                    
-                    finalChapters = [...finalChapters, ...consumetChapters];
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error('Failed to fetch from EN scraper', e);
-          }
-        }
-
-        const genres = mangaData.attributes.tags
-          ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
+        const genres = (mangaData.attributes?.tags ?? [])
+          .filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
           .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name ?? {})[0])
           .slice(0, 4);
 
-        // Synchronous — cover is now based on MangaDex ID only (no AniList fallback)
         const coverUrl = getCoverUrlWithFallback(mangaData.id, coverArt?.attributes?.fileName);
 
         setManga({
@@ -132,51 +147,38 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
           synopsis: description,
         });
 
-        // The 'finalChapters' variable currently holds the MangaDex chapters for BOTH languages OR the scraper chapters if lang === 'id'.
-        // However, we still need to split them by language properly.
-        // Wait, if it came from scraper, they are all 'id' chapters!
-        
         let idChapters: any[] = [];
         let enChapters: any[] = [];
-        
-        const isIdScraper = finalChapters.length > 0 && finalChapters[0].isScraper;
-        const isEnScraper = finalChapters.some((ch: any) => ch.isEnScraper);
-        
+
+        const isIdScraper = finalChapters.length > 0 && (
+          finalChapters[0].isScraper || 
+          finalChapters[0].id?.startsWith('bk-') || 
+          finalChapters[0].id?.startsWith('bk:')
+        );
+
         if (isIdScraper) {
-            idChapters = finalChapters; // Scraper is 100% ID
-            
-            // Re-map the rawChapters just for EN fallback
-            enChapters = rawChapters
-              .filter((ch: any) => ch.attributes.translatedLanguage === 'en')
-              .map((ch: any) => {
-                 const group = ch.relationships?.find((r: any) => r.type === 'scanlation_group');
-                 return {
-                   id: ch.id,
-                   chapter_number: ch.attributes.chapter || 'Oneshot',
-                   title: ch.attributes.title || null,
-                   published_at: ch.attributes.readableAt || ch.attributes.publishAt,
-                   scanlator: group?.attributes?.name || 'Official',
-                   externalUrl: ch.attributes.externalUrl || null,
-                 };
-              });
+          idChapters = finalChapters;
+          enChapters = rawChapters
+            .filter((ch: any) => ch.attributes?.translatedLanguage === 'en')
+            .map((ch: any) => ({
+              id: ch.id,
+              chapter_number: ch.attributes?.chapter || 'Oneshot',
+              title: ch.attributes?.title || null,
+              published_at: ch.attributes?.readableAt || ch.attributes?.publishAt,
+              scanlator: 'English Scan',
+              externalUrl: null,
+            }));
         } else {
-            // Normal MangaDex mapping for ID
-            idChapters = finalChapters.filter((ch: any) => {
-                const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
-                return rawMatch && rawMatch.attributes.translatedLanguage === 'id';
-            });
-            
-            if (isEnScraper) {
-                enChapters = finalChapters.filter((ch: any) => ch.isEnScraper);
-            } else {
-                enChapters = finalChapters.filter((ch: any) => {
-                    const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
-                    return rawMatch && rawMatch.attributes.translatedLanguage === 'en';
-                });
-            }
+          idChapters = finalChapters.filter((ch: any) => {
+            const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
+            return rawMatch && rawMatch.attributes?.translatedLanguage === 'id';
+          });
+          enChapters = finalChapters.filter((ch: any) => {
+            const rawMatch = rawChapters.find((r: any) => r.id === ch.id);
+            return rawMatch && rawMatch.attributes?.translatedLanguage === 'en';
+          });
         }
-        
-        // Helper to sort chapters descending (Newest first)
+
         const sortDesc = (a: any, b: any) => {
           const numA = parseFloat(a.chapter_number) || 0;
           const numB = parseFloat(b.chapter_number) || 0;
@@ -188,25 +190,19 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
 
         setAllChapters({ en: enChapters, id: idChapters });
 
-        // Smart language selection:
-        // If user wants ID but no ID chapters exist → auto-fallback to EN
-        const preferredLang = lang as 'en' | 'id';
-        const preferredList = preferredLang === 'id' ? idChapters : enChapters;
-        const fallbackList = preferredLang === 'id' ? enChapters : idChapters;
-
-        if (preferredList.length > 0) {
-          setChapterLang(preferredLang);
-          setChapters(preferredList);
+        if (idChapters.length > 0) {
+          setChapterLang('id');
+          setChapters(idChapters);
           setUsingFallbackLang(false);
-        } else if (fallbackList.length > 0) {
-          const fallback = preferredLang === 'id' ? 'en' : 'id';
-          setChapterLang(fallback);
-          setChapters(fallbackList);
+        } else if (enChapters.length > 0) {
+          setChapterLang('en');
+          setChapters(enChapters);
           setUsingFallbackLang(true);
         } else {
           setChapters([]);
           setUsingFallbackLang(false);
         }
+
       } catch (error) {
         console.error(error);
       } finally {
@@ -216,7 +212,6 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
     fetchData();
   }, [slug, lang]);
 
-  // Switch chapter language manually
   const switchChapterLang = (newLang: 'en' | 'id') => {
     const list = allChapters[newLang];
     if (list.length > 0) {
@@ -258,34 +253,46 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
     );
   }
 
-  if (!manga) return <div className="text-center py-20 text-white">Manga not found</div>;
+  if (!manga) {
+    return (
+      <div className="text-center py-24 text-zinc-400 flex flex-col items-center gap-4">
+        <BookX className="w-12 h-12 text-[#F27D26]" />
+        <p className="text-lg text-white font-medium">Komik tidak ditemukan</p>
+        <Link href="/" className="bg-[#F27D26] text-black font-bold px-6 py-2.5 rounded-lg text-sm">
+          Kembali ke Beranda
+        </Link>
+      </div>
+    );
+  }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zynqtoon.vercel.app';
   const firstChapterId = chapters.length > 0 ? chapters[chapters.length - 1].id : null;
   const hasEnChapters = allChapters.en.length > 0;
   const hasIdChapters = allChapters.id.length > 0;
 
   return (
     <main className="flex-1">
-      {/* Banner / Cover Section */}
+      {/* Hero Section */}
       <section className="relative">
-        <div className="h-[40vh] md:h-[50vh] w-full relative overflow-hidden">
-          <div className="absolute inset-0 bg-black/60 z-10 backdrop-blur-sm" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent z-20" />
+        <div className="absolute inset-0 h-[40vh] md:h-[50vh] w-full overflow-hidden">
           <img
-            src={manga.cover_url}
+            src={manga.cover_url || "/cover-placeholder.svg"}
             alt={manga.title}
-            className="w-full h-full object-cover object-top opacity-50"
-            onError={(e) => { (e.target as HTMLImageElement).src = '/cover-placeholder.svg'; }}
+            className="w-full h-full object-cover blur-2xl opacity-20 scale-110"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent" />
         </div>
 
-        <div className="container mx-auto px-4 relative z-30 -mt-32 md:-mt-48 flex flex-col md:flex-row gap-6 md:gap-10">
-          <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 shadow-2xl shadow-black rounded-lg overflow-hidden border border-white/10 bg-[#121212]">
+        <div className="container mx-auto px-4 relative z-30 pt-16 md:pt-24 flex flex-col md:flex-row gap-6 md:gap-10">
+          <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-[#111115]">
             <img
-              src={manga.cover_url}
+              src={manga.cover_url || "/cover-placeholder.svg"}
               alt={manga.title}
-              className="w-full h-auto aspect-[2/3] object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).src = '/cover-placeholder.svg'; }}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/cover-placeholder.svg";
+              }}
             />
           </div>
 
@@ -297,13 +304,13 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm">
               <span className="text-white/80">{manga.author}</span>
               <span className="text-white/40">•</span>
-              <span className={manga.status === 'ONGOING' ? 'text-green-400' : 'text-blue-400'}>
+              <span className={manga.status?.toUpperCase() === 'ONGOING' ? 'text-green-400' : 'text-blue-400'}>
                 {manga.status}
               </span>
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-2">
-              {manga.genres.map((genre: string) => (
+              {(manga.genres || []).map((genre: string) => (
                 <span key={genre} className="bg-white/10 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   {genre}
                 </span>
@@ -311,40 +318,71 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Link
-                href={firstChapterId ? `/manga/${manga.slug}/chapter-${firstChapterId}` : '#'}
-                className={`text-center px-8 py-3 rounded-md font-bold text-sm transition-colors ${firstChapterId ? 'bg-[#F27D26] hover:bg-[#ff9d5c] text-black' : 'bg-white/10 text-white/40 cursor-not-allowed pointer-events-none'}`}
+              <Link 
+                href={getHistory(manga.id) ? `/manga/${manga.slug}/chapter-${getHistory(manga.id)?.chapterId}` : (firstChapterId ? `/manga/${manga.slug}/chapter-${firstChapterId}` : '#')}
+                className={`text-center px-8 py-3 rounded-md font-bold text-sm transition-colors ${(firstChapterId || getHistory(manga.id)) ? 'bg-[#F27D26] hover:bg-[#ff9d5c] text-black' : 'bg-white/10 text-white/40 cursor-not-allowed pointer-events-none'}`}
               >
-                {lang === 'id' ? 'BACA CHAPTER PERTAMA' : 'READ FIRST CHAPTER'}
+                {getHistory(manga.id) 
+                  ? `LANJUTKAN CH. ${getHistory(manga.id)?.chapterNumber}`
+                  : 'BACA CHAPTER PERTAMA'}
               </Link>
-              <button className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-md font-bold text-sm transition-colors opacity-50 cursor-not-allowed pointer-events-none">
-                + {lang === 'id' ? 'SIMPAN' : 'WISHLIST'}
+          
+              <button 
+                onClick={() => {
+                  if (isBookmarked(manga.id)) {
+                    removeBookmark(manga.id);
+                  } else {
+                    addBookmark({
+                      id: manga.id,
+                      title: manga.title,
+                      slug: manga.slug,
+                      coverUrl: manga.cover_url,
+                      source: manga.source || 'bacakomik',
+                      author: manga.author,
+                      status: manga.status,
+                      genres: manga.genres
+                    });
+                  }
+                }}
+                className={`text-center px-6 py-3 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 ${
+                  isBookmarked(manga.id) 
+                    ? 'bg-white/10 text-white hover:bg-white/15 border border-white/20' 
+                    : 'bg-white/5 text-white/80 hover:bg-white/10 border border-white/10'
+                }`}
+              >
+                {isBookmarked(manga.id) ? (
+                  <>
+                    <BookmarkCheck className="w-4 h-4 text-[#F27D26]" />
+                    Tersimpan
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4" />
+                    Simpan ke Koleksi
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Content Section */}
-      <section className="container mx-auto px-4 py-12 flex flex-col lg:flex-row gap-12">
-        {/* Left Column (Synopsis) */}
-        <div className="lg:w-1/3">
-          <h3 className="text-lg font-medium text-white mb-4 border-b border-white/10 pb-2">
-            {lang === 'id' ? 'Sinopsis' : 'Synopsis'}
-          </h3>
-          <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">
-            {manga.synopsis}
-          </p>
-        </div>
+      {/* Synopsis Section */}
+      <section className="container mx-auto px-4 py-8">
+        <h2 className="text-xs font-mono text-white/40 uppercase tracking-widest mb-3">Sinopsis</h2>
+        <p className="text-zinc-300 leading-relaxed text-sm md:text-base max-w-4xl whitespace-pre-line">
+          {manga.synopsis}
+        </p>
+      </section>
 
-        {/* Right Column (Chapters) */}
-        <div className="lg:w-2/3">
-          <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4">
-            <h3 className="text-lg font-medium text-white">
-              {lang === 'id' ? 'Daftar Chapter' : 'Chapter List'}
-            </h3>
+      {/* Chapters Section */}
+      <section className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              Daftar Chapter
+            </h2>
 
-            {/* Language switcher for chapters */}
             <div className="flex items-center gap-2">
               {hasIdChapters && (
                 <button
@@ -366,47 +404,38 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
             </div>
           </div>
 
-          {/* Fallback language notice */}
           {usingFallbackLang && (
             <div className="flex items-center gap-2 bg-[#F27D26]/10 border border-[#F27D26]/20 rounded-lg px-4 py-3 mb-4">
               <Globe className="w-4 h-4 text-[#F27D26] flex-shrink-0" />
               <p className="text-xs text-[#F27D26]">
-                {lang === 'id'
-                  ? `Chapter bahasa Indonesia belum tersedia. Menampilkan ${chapters.length} chapter bahasa Inggris.`
-                  : `No English chapters available. Showing ${chapters.length} Indonesian chapters.`}
+                Chapter bahasa Indonesia belum tersedia. Menampilkan {chapters.length} chapter bahasa Inggris.
               </p>
             </div>
           )}
 
           <div className="space-y-2">
             {chapters.length === 0 ? (
-              <div className="text-center py-12 flex flex-col items-center gap-3">
-                <span className="text-4xl">📭</span>
-                <p className="text-white/40">
-                  {lang === 'id'
-                    ? 'Tidak ada chapter yang tersedia untuk manga ini.'
-                    : 'No chapters available for this manga.'}
+              <div className="text-center py-16 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#111115] border border-white/10 flex items-center justify-center text-[#F27D26]">
+                  <BookX className="w-6 h-6 opacity-75" />
+                </div>
+                <p className="text-zinc-400 text-sm max-w-sm">
+                  Tidak ada chapter yang tersedia untuk komik ini saat ini.
                 </p>
               </div>
             ) : (
               chapters.map((chapter: any) => {
-                const isExternal = !!chapter.externalUrl;
-                const chapterHref = isExternal 
-                  ? chapter.externalUrl 
-                  : `/manga/${manga.slug}/chapter-${chapter.id}`;
+                const chapterHref = `/manga/${manga.slug}/chapter-${chapter.id}`;
 
                 return (
                   <Link
                     key={chapter.id}
                     href={chapterHref}
-                    target={isExternal ? "_blank" : undefined}
-                    rel={isExternal ? "noopener noreferrer" : undefined}
                     className="flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
                   >
                     <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
                       <span className="font-bold text-white group-hover:text-[#F27D26] transition-colors flex items-center gap-2">
-                        {lang === 'id' ? 'Chapter' : 'Ch.'} {chapter.chapter_number}
-                        {isExternal && <ExternalLink className="w-3 h-3 text-[#F27D26]" />}
+                        Chapter {chapter.chapter_number}
                       </span>
                       {chapter.title && chapter.title !== `Chapter ${chapter.chapter_number}` && (
                         <>
@@ -417,9 +446,7 @@ export default function Series({ params }: { params: Promise<{ slug: string }> }
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="hidden sm:flex flex-col items-end text-xs text-white/40">
-                        <span className={isExternal ? "text-[#F27D26]" : ""}>
-                          {isExternal ? "Official Link" : chapter.scanlator}
-                        </span>
+                        <span>{chapter.scanlator || 'Komik Indo'}</span>
                         <span>{chapter.published_at ? new Date(chapter.published_at).toLocaleDateString() : '—'}</span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-[#F27D26]" />

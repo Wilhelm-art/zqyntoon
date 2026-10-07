@@ -1,116 +1,91 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { getMangaList, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect } from "react";
+import { getPopularComics, getManhwaComics } from "@/lib/scraper/bacakomik";
+import { Flame, Sparkles } from "lucide-react";
 
 export default function Trending() {
   const { lang } = useLanguageStore();
+  const [tab, setTab] = useState<'popular' | 'manhwa'>('popular');
   const [mangaList, setMangaList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const LIMIT = 30;
-
-  const loadData = async (currentOffset: number, append = false) => {
-    try {
-      if (!append) setIsLoading(true);
-      else setIsLoadingMore(true);
-      const rawTrending = await getMangaList({ limit: LIMIT, offset: currentOffset, includes: ['cover_art', 'author'] });
-      if (!rawTrending || rawTrending.length < LIMIT) setHasMore(false);
-      
-      const mapData = (mdData: any) => {
-        if (!mdData || !Array.isArray(mdData)) return [];
-        return mdData.map((m: any) => {
-          const coverArt = m.relationships.find((r: any) => r.type === 'cover_art');
-          const author = m.relationships.find((r: any) => r.type === 'author');
-          
-          const title = getMangaTitle(m);
-
-          const genres = m.attributes.tags
-            ?.filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
-            .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name || {})[0])
-            .slice(0, 3) || [];
-            
-          const coverUrl = getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName);
-            
-          return {
-            id: m.id,
-            title,
-            slug: m.id, 
-            cover_url: coverUrl,
-            author: author?.attributes?.name || 'Unknown Author', 
-            rating: null,
-            status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
-            genres,
-            synopsis: ''
-          };
-        });
-      };
-
-      const newData = mapData(rawTrending);
-      setMangaList(prev => append ? [...prev, ...newData] : newData);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  };
 
   useEffect(() => {
-    loadData(0);
-  }, []);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        if (tab === 'popular') {
+          const data = await getPopularComics();
+          setMangaList(data);
+        } else {
+          const data = await getManhwaComics();
+          setMangaList(data);
+        }
+      } catch (error) {
+        console.error("Failed to load trending comics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleLoadMore = () => {
-    const nextOffset = offset + LIMIT;
-    setOffset(nextOffset);
-    loadData(nextOffset, true);
-  };
+    loadData();
+  }, [tab]);
 
   return (
     <main className="flex-1 container mx-auto px-4 py-8">
-      <div className="flex justify-between items-end mb-8">
-        <h1 className="text-3xl md:text-4xl font-serif italic font-light tracking-tight text-white">
-          {lang === 'id' ? 'Sedang Populer' : 'Trending Now'}
-        </h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-serif italic font-light tracking-tight text-white flex items-center gap-2">
+            <Flame className="w-7 h-7 text-[#F27D26]" />
+            Komik Terpopuler
+          </h1>
+          <p className="text-xs text-white/40 mt-1 font-mono">Daftar judul paling banyak dibaca pembaca Indonesia</p>
+        </div>
+
+        {/* Tab switch */}
+        <div className="flex items-center gap-2 bg-[#121215] border border-white/10 p-1 rounded-xl self-start">
+          <button
+            onClick={() => setTab('popular')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              tab === 'popular'
+                ? 'bg-[#F27D26] text-black shadow-md'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            Semua Komik
+          </button>
+          <button
+            onClick={() => setTab('manhwa')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              tab === 'manhwa'
+                ? 'bg-[#F27D26] text-black shadow-md'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Khusus Manhwa
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
           {Array.from({ length: 18 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2">
-              <div className="aspect-[3/4] rounded-lg bg-[#1a1a1a] animate-pulse" />
+              <div className="aspect-[3/4] rounded-xl bg-[#111115] animate-pulse" />
               <div className="h-4 bg-white/5 rounded animate-pulse" />
               <div className="h-3 w-2/3 bg-white/5 rounded animate-pulse" />
             </div>
           ))}
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-            {mangaList.map((manga: any, index: number) => (
-              <MangaCard key={`${manga.id}-${index}`} manga={manga} lang={lang} />
-            ))}
-          </div>
-          
-          {hasMore && (
-            <div className="mt-12 flex justify-center">
-              <button 
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white px-8 py-3 rounded-full font-bold text-sm transition-colors border border-white/10 flex items-center gap-2"
-              >
-                {isLoadingMore ? (
-                  <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block" />{lang === 'id' ? 'Memuat...' : 'Loading...'}</>
-                ) : (
-                  lang === 'id' ? 'Muat Lebih Banyak' : 'Load More'
-                )}
-              </button>
-            </div>
-          )}
-        </>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
+          {mangaList.map((manga: any) => (
+            <MangaCard key={manga.id} manga={manga} lang={lang} />
+          ))}
+        </div>
       )}
     </main>
   );

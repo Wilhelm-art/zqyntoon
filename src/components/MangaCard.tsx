@@ -6,13 +6,15 @@ import Link from "next/link";
 interface MangaCardData {
   id: string;
   title: string;
-  slug: string;
+  slug?: string;
   synopsis?: string;
-  cover_url: string | null;
-  status: string;
-  author: string;
-  genres: string[];
-  rating: number | null;
+  cover_url?: string | null;
+  coverUrl?: string | null;
+  status?: string;
+  author?: string;
+  genres?: string[];
+  rating?: number | string | null;
+  source?: string;
 }
 
 interface MangaCardProps {
@@ -21,28 +23,40 @@ interface MangaCardProps {
 }
 
 export function MangaCard({ manga, lang = "id" }: MangaCardProps) {
+  const targetSlug = manga.slug || manga.id;
+  const cover = manga.cover_url || manga.coverUrl || "/cover-placeholder.svg";
+
   return (
-    <Link href={`/manga/${manga.slug}`} className="group flex flex-col gap-2 cursor-pointer">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#1a1a1a] border border-white/5">
+    <Link href={`/manga/${targetSlug}`} className="group flex flex-col gap-2 cursor-pointer select-none">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-[#111115] border border-white/5 group-hover:border-[#F27D26]/40 transition-all duration-300 shadow-sm">
         <img
-          src={manga.cover_url || "/cover-placeholder.svg"}
+          src={cover}
           alt={manga.title}
-          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+          className="object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
           loading="lazy"
+          decoding="async"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            if (target.src !== window.location.origin + "/cover-placeholder.svg") {
+            if (typeof window !== 'undefined' && target.src !== window.location.origin + "/cover-placeholder.svg") {
               target.src = "/cover-placeholder.svg";
             }
           }}
         />
-        {/* Status badge instead of null rating */}
-        <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-white">
+
+        {/* Source badge */}
+        {manga.source && manga.source === 'bacakomik' && (
+          <div className="absolute top-2 right-2 bg-[#F27D26] px-2 py-0.5 rounded-full text-[9px] font-black text-black uppercase tracking-wider shadow-md">
+            ID Komik
+          </div>
+        )}
+
+        {/* Status / Rating badge */}
+        <div className="absolute bottom-2 left-2 bg-[#070709]/85 backdrop-blur-md border border-white/10 px-2 py-0.5 rounded-md text-[10px] font-mono text-white/90 flex items-center gap-1 shadow-sm">
           {manga.rating != null
             ? `★ ${manga.rating}`
-            : manga.status === "ONGOING"
+            : manga.status?.toUpperCase() === "ONGOING"
             ? (lang === "id" ? "Berlanjut" : "Ongoing")
-            : manga.status === "COMPLETED"
+            : manga.status?.toUpperCase() === "COMPLETED" || manga.status === "Tamat"
             ? (lang === "id" ? "Tamat" : "Completed")
             : manga.status || "—"}
         </div>

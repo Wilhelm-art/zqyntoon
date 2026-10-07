@@ -1,0 +1,6 @@
+name = "zynqtoon-edge-proxy"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# Run locally: npx wrangler dev
+# Deploy: npx wrangler deploy

@@ -2,63 +2,33 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { getMangaList, getCoverUrlWithFallback, getMangaTitle } from "@/lib/api/mangadex";
 import { MangaCard } from "@/components/MangaCard";
 import Link from "next/link";
 import { useLanguageStore } from "@/store/languageStore";
 import { useState, useEffect } from "react";
+import { getHomepageData } from "@/lib/api/unifiedManga";
 
 export default function Home() {
   const { lang } = useLanguageStore();
+  const [heroManga, setHeroManga] = useState<any>(null);
   const [trendingManga, setTrendingManga] = useState<any[]>([]);
   const [latestManga, setLatestManga] = useState<any[]>([]);
+  const [manhwaManga, setManhwaManga] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const rawTrending = await getMangaList({ limit: 10, offset: 0, includes: ['cover_art', 'author'] });
-      const rawLatest = await getMangaList({ limit: 10, offset: 20, includes: ['cover_art', 'author'] });
+      const data = await getHomepageData();
       
-      const mapData = (mdData: any) => {
-        if (!mdData || !Array.isArray(mdData)) return [];
-        return mdData.map((m: any) => {
-          const coverArt = m.relationships?.find((r: any) => r.type === 'cover_art');
-          const author = m.relationships?.find((r: any) => r.type === 'author');
-          
-          const title = getMangaTitle(m);
-          
-          let description = 'No synopsis available.';
-          if (m.attributes.description && typeof m.attributes.description === 'object') {
-              description = m.attributes.description.en || m.attributes.description.id || Object.values(m.attributes.description)[0] || description;
-          }
-          
-          const genres = (m.attributes.tags ?? [])
-            .filter((t: any) => t.attributes?.group === 'genre' || t.attributes?.group === 'theme')
-            .map((t: any) => t.attributes?.name?.en || Object.values(t.attributes?.name ?? {})[0])
-            .slice(0, 3);
-            
-          // Synchronous — no await needed
-          const coverUrl = getCoverUrlWithFallback(m.id, coverArt?.attributes?.fileName);
-            
-          return {
-            id: m.id,
-            title,
-            slug: m.id, 
-            cover_url: coverUrl,
-            author: author?.attributes?.name || 'Unknown Author', 
-            rating: null,
-            status: m.attributes?.status?.toUpperCase() || 'UNKNOWN',
-            genres: genres.length > 0 ? genres : ['Manga'],
-            synopsis: description
-          };
-        });
-      };
-
-      setTrendingManga(mapData(rawTrending));
-      setLatestManga(mapData(rawLatest));
+      if (data.hero && data.hero.length > 0) {
+        setHeroManga(data.hero[0]);
+      }
+      setTrendingManga(data.trending || []);
+      setLatestManga(data.latest || []);
+      setManhwaManga(data.idRecommended || []);
     } catch (error) {
-      console.error("Failed to load manga:", error);
+      console.error("Failed to load Indonesian manga:", error);
     } finally {
       setIsLoading(false);
     }
@@ -68,21 +38,19 @@ export default function Home() {
     loadData();
   }, []);
 
-  const heroManga = trendingManga.length > 0 ? trendingManga[0] : null;
-
   if (isLoading) {
     return (
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-12">
           <div className="rounded-2xl overflow-hidden aspect-[21/9] md:aspect-[21/7] bg-[#121212] animate-pulse" />
         </div>
-        {[0,1].map(s => (
+        {[0, 1].map((s) => (
           <div key={s} className="mb-12">
             <div className="h-6 w-40 bg-white/5 rounded mb-6 animate-pulse" />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({length:5}).map((_,i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex flex-col gap-2">
-                  <div className="aspect-[3/4] rounded-lg bg-[#1a1a1a] animate-pulse" />
+                  <div className="aspect-[3/4] rounded-xl bg-[#1a1a1a] animate-pulse" />
                   <div className="h-4 bg-white/5 rounded animate-pulse" />
                   <div className="h-3 w-2/3 bg-white/5 rounded animate-pulse" />
                 </div>
@@ -98,20 +66,20 @@ export default function Home() {
     <main className="flex-1 container mx-auto px-4 py-8">
       {heroManga && (
         <section className="mb-12">
-          <div className="relative rounded-2xl overflow-hidden aspect-[21/9] md:aspect-[21/7] bg-[#121212]">
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10" />
+          <div className="relative rounded-2xl overflow-hidden aspect-[21/9] md:aspect-[21/7] bg-[#111115] border border-white/10 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent z-10" />
             <img 
-              src={heroManga.cover_url} 
-              alt="Hero Banner" 
-              className="absolute right-0 top-0 w-2/3 h-full object-cover opacity-50"
+              src={heroManga.cover_url || heroManga.coverUrl || "/cover-placeholder.svg"} 
+              alt={heroManga.title} 
+              className="absolute right-0 top-0 w-full md:w-3/5 h-full object-cover opacity-40 blur-xs"
             />
-            <div className="relative z-20 h-full flex flex-col justify-center p-6 md:p-10 w-full md:w-2/3 space-y-3">
+            <div className="relative z-20 h-full flex flex-col justify-center p-6 md:p-12 w-full md:w-2/3 space-y-3">
               <div className="flex gap-2 mb-2">
-                <span className="bg-[#F27D26] text-black text-[10px] font-bold px-2 py-0.5 rounded">
+                <span className="bg-[#F27D26] text-black text-[10px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider">
                   {lang === 'id' ? 'POPULER #1' : 'TRENDING #1'}
                 </span>
-                {heroManga.genres[0] && (
-                  <span className="bg-white/10 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                {heroManga.genres && heroManga.genres[0] && (
+                  <span className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">
                     {heroManga.genres[0]}
                   </span>
                 )}
@@ -119,53 +87,96 @@ export default function Home() {
               <h1 className="text-3xl md:text-5xl font-serif italic font-light tracking-tight text-white line-clamp-1">
                 {heroManga.title}
               </h1>
-              <p className="text-sm text-white/60 line-clamp-2 italic mb-4">
+              <p className="text-sm text-white/60 line-clamp-2 italic mb-4 max-w-xl">
                 {heroManga.synopsis}
               </p>
               <div className="flex gap-4 pt-2">
-                <Link href={`/manga/${heroManga.slug}`} className="bg-white text-black px-6 py-2 rounded-md font-bold text-sm hover:bg-zinc-200 transition-colors">
+                <Link 
+                  href={`/manga/${heroManga.slug || heroManga.id}`} 
+                  className="bg-[#F27D26] hover:bg-[#ff9d5c] text-black px-8 py-3 rounded-md font-bold text-sm transition-colors shadow-lg"
+                >
                   {lang === 'id' ? 'MULAI BACA' : 'START READING'}
                 </Link>
-                <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors opacity-50 cursor-not-allowed pointer-events-none">
-                  + {lang === 'id' ? 'SIMPAN' : 'WISHLIST'}
-                </button>
               </div>
             </div>
           </div>
         </section>
       )}
 
+      {/* Trending Comics Shelf */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Sedang Populer' : 'Trending Now'}</h2>
-          <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+              {lang === 'id' ? 'Komik Sedang Populer' : 'Trending Now'}
+            </h2>
+            <p className="text-xs text-white/40 mt-1 font-mono">Pilihan pembaca komik Indonesia minggu ini</p>
+          </div>
+          <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">
+            {lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}
+          </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-          {trendingManga.map((manga: any) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
+          {trendingManga.slice(0, 12).map((manga: any) => (
             <MangaCard key={manga.id} manga={manga} lang={lang} />
           ))}
         </div>
       </section>
 
+      {/* Latest Comics Shelf */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Pembaruan Terbaru' : 'Latest Updates'}</h2>
-          <Link href="/latest" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">{lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}</Link>
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+              {lang === 'id' ? 'Chapter Terbaru Bahasa Indonesia' : 'Latest Chapter Updates'}
+            </h2>
+            <p className="text-xs text-white/40 mt-1 font-mono">Update chapter komik terbaru hari ini</p>
+          </div>
+          <Link href="/latest" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">
+            {lang === 'id' ? 'LIHAT SEMUA' : 'VIEW ALL'}
+          </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-          {latestManga.map((manga: any) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
+          {latestManga.slice(0, 12).map((manga: any) => (
             <MangaCard key={manga.id} manga={manga} lang={lang} />
           ))}
         </div>
       </section>
 
-      <section>
+      {/* Manhwa Recommendations */}
+      {manhwaManga.length > 0 && (
+        <section className="mb-12">
+          <div className="flex justify-between items-end mb-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+                Rekomendasi Manhwa & Webtoon
+              </h2>
+              <p className="text-xs text-white/40 mt-1 font-mono">Serial berwarna terbaik terjemahan Indonesia</p>
+            </div>
+            <Link href="/trending" className="text-[#F27D26] text-xs font-semibold hover:text-white transition-colors">
+              LIHAT SEMUA
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-5">
+            {manhwaManga.slice(0, 12).map((manga: any) => (
+              <MangaCard key={manga.id} manga={manga} lang={lang} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Genre Exploration */}
+      <section className="pt-4 border-t border-white/5">
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-xl font-medium tracking-tight text-white">{lang === 'id' ? 'Jelajahi Genre' : 'Browse Genres'}</h2>
+          <h2 className="text-lg font-bold tracking-tight text-white">Jelajahi Genre Komik</h2>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {["Action", "Romance", "Fantasy", "Sci-Fi", "Horror", "Comedy", "Slice of Life", "Mystery", "Drama", "Supernatural"].map(genre => (
-            <Link href={`/genre/${genre.toLowerCase().replace(/ /g, '-')}`} key={genre} className="px-4 py-2 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors border border-white/5">
+        <div className="flex flex-wrap gap-2.5">
+          {["Action", "Adventure", "Fantasy", "Manhwa", "Manhua", "Martial Arts", "Romance", "Comedy", "Isekai", "Supernatural", "Mystery"].map(genre => (
+            <Link 
+              href={`/genre/${genre.toLowerCase().replace(/ /g, '-')}`} 
+              key={genre} 
+              className="px-4 py-2 rounded-full bg-white/5 text-white/70 text-xs font-medium hover:bg-[#F27D26] hover:text-black transition-all border border-white/5"
+            >
               {genre}
             </Link>
           ))}

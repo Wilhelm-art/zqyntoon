@@ -3,9 +3,9 @@ import { searchManga } from '@/lib/scraper/bacakomik';
 
 export async function GET(request: NextRequest) {
   try {
-    const title = request.nextUrl.searchParams.get('title');
+    const title = request.nextUrl.searchParams.get('title') || request.nextUrl.searchParams.get('q');
     if (!title) {
-      return NextResponse.json({ error: 'Missing title' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing title parameter' }, { status: 400 });
     }
 
     const results = await searchManga(title);
