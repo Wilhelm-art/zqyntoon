@@ -1,0 +1,21 @@
+# ZqynToon (https://zynqtoon.vercel.app)
+
+> Platform baca komik Manga, Manhwa, dan Manhua Bahasa Indonesia terlengkap, tercepat, dengan reader internal tanpa gangguan iklan dan tanpa pengalihan situs eksternal.
+
+## Informasi Situs & Fitur Utama
+- **Fokus Konten:** 100% Komik Bahasa Indonesia (Manga Jepang, Manhwa Korea, Manhua Tiongkok).
+- **Internal Reader Engine:** Pembacaan gambar chapter dilakukan secara internal langsung di situs ZqynToon dengan mode Webtoon continuous vertical scroll dan Paged flip reader. Tidak ada redirect atau tautan eksternal ke situs lain.
+- **Teknologi:** Dibangun dengan Next.js 16+, Turbopack, Tailwind CSS v4, Edge Caching, dan anti-hotlink bypass proxy.
+- **Fitur Pengguna:** Pencarian instan live, penanda buku (bookmarks), riwayat bacaan otomatis (reading progress), mode layar penuh (fullscreen).
+
+## Struktur URL
+- `/` : Beranda (Spotlight Hero, Komik Populer, Rilis Terbaru)
+- `/trending` : Daftar komik terpopuler yang paling banyak dibaca
+- `/latest` : Update rilis chapter komik terbaru
+- `/manga/{slug}` : Halaman detail komik, sinopsis, informasi pengarang/artis, dan daftar seluruh chapter
+- `/manga/{slug}/{chapter-slug}` : Internal Chapter Reader untuk membaca chapter komik
+- `/bookmarks` : Daftar komik yang disimpan oleh pembaca
+- `/history` : Riwayat membaca dan chapter terakhir yang dibuka
+
+## Kontak & Lisensi
+Konten dikurasi dari rilisan komunitas penerjemah scanlation publik untuk tujuan hiburan dan promosi komik di Indonesia.

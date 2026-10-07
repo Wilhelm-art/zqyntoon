@@ -1,0 +1,8 @@
+<svg width="400" height="533" viewBox="0 0 400 533" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="533" fill="#12141D"/>
+  <rect x="20" y="20" width="360" height="493" rx="12" stroke="#232733" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="200" cy="240" r="48" fill="#1A1D27"/>
+  <path d="M185 225L215 240L185 255V225Z" fill="#F27D26"/>
+  <text x="200" y="320" fill="#6B7280" font-family="system-ui, sans-serif" font-size="14" font-weight="600" text-anchor="middle" letter-spacing="1">ZQYNTOON</text>
+  <text x="200" y="342" fill="#4B5563" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Cover Tidak Tersedia</text>
+</svg>
