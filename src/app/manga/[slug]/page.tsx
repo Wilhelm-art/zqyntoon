@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Star, User, Palette, Bookmark, Calendar } from "lucide-react";
+import { Star, User, Palette } from "lucide-react";
 import { getComicDetail } from "@/lib/scraper/bacakomik";
 import { ComicDetailClient } from "@/components/ComicDetailClient";
 
