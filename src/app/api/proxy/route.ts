@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
 
     if (parsedUrl.hostname.includes("mangadex")) {
       headers["Referer"] = "https://mangadex.org/";
+    } else if (parsedUrl.hostname.includes("komiku")) {
+      headers["Referer"] = "https://komiku.org/";
     } else {
       headers["Referer"] = "https://bacakomik.my/";
     }
