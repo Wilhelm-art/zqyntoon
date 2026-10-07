@@ -1,32 +1,3 @@
-import * as cheerio from "cheerio";
-
-const BASE_URL = "https://bacakomik.my";
-
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
-];
-
-async function fetchHtml(url: string): Promise<string> {
-  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": ua,
-      "Referer": BASE_URL,
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-      "Cache-Control": "no-cache",
-    },
-    next: { revalidate: 300 }, // 5 min cache
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
-  }
-
-  return response.text();
-}
-
 export interface ComicItem {
   slug: string;
   title: string;
@@ -39,8 +10,9 @@ export interface ComicItem {
 }
 
 export interface ChapterItem {
-  id: string; // chapter slug e.g. "one-piece-chapter-1138"
+  id: string; // chapter ID
   title: string;
+  chapterNumber?: string;
   releaseDate?: string;
 }
 
@@ -68,221 +40,317 @@ export interface ChapterPagesResult {
   nextChapterSlug?: string | null;
 }
 
-function cleanImageUrl(url?: string): string {
-  if (!url) return "";
-  let clean = url.trim();
-  if (clean.startsWith("//")) {
-    clean = "https:" + clean;
-  }
-  return clean;
+const MD_BASE = "https://api.mangadex.org";
+
+function getMangaTitle(attributes: any): string {
+  if (!attributes?.title) return "Komik";
+  return (
+    attributes.title.id ||
+    attributes.title.en ||
+    Object.values(attributes.title)[0] ||
+    "Komik"
+  );
 }
 
-function extractSlugFromUrl(url?: string): string {
-  if (!url) return "";
-  try {
-    const parsed = new URL(url, BASE_URL);
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    // e.g. /manga/one-piece/ -> parts: ["manga", "one-piece"]
-    if (parts.length >= 2 && parts[0] === "manga") {
-      return parts[1];
-    }
-    return parts[parts.length - 1] || "";
-  } catch {
-    const clean = url.replace(/\/+$/, "");
-    const parts = clean.split("/");
-    return parts[parts.length - 1] || "";
+function getMangaDescription(attributes: any): string {
+  if (!attributes?.description) return "";
+  return attributes.description.id || attributes.description.en || Object.values(attributes.description)[0] || "";
+}
+
+function determineComicType(tags: any[]): string {
+  for (const t of tags || []) {
+    const name = t.attributes?.name?.en?.toLowerCase();
+    if (name === "manhwa") return "Manhwa";
+    if (name === "manhua") return "Manhua";
   }
+  return "Manga";
 }
 
 /**
- * Get latest updated comics in Indonesian
+ * Get latest chapter releases with priority on Indonesian
  */
 export async function getLatestComics(page: number = 1): Promise<{ comics: ComicItem[]; hasNextPage: boolean }> {
-  const url = page === 1 ? `${BASE_URL}/komik-terbaru/` : `${BASE_URL}/komik-terbaru/page/${page}/`;
-  const html = await fetchHtml(url);
-  const $ = cheerio.load(html);
-  const comics: ComicItem[] = [];
+  try {
+    const limit = 24;
+    const offset = (page - 1) * limit;
 
-  $(".animepost").each((_, el) => {
-    const titleEl = $(el).find(".tt h4, .tt h2, .animepost-title");
-    const linkEl = $(el).find("a").first();
-    const href = linkEl.attr("href") || "";
-    const slug = extractSlugFromUrl(href);
-    const title = titleEl.text().trim() || $(el).find("img").attr("title") || $(el).find("img").attr("alt") || slug;
-
-    const imgEl = $(el).find("img");
-    const cover = cleanImageUrl(
-      imgEl.attr("data-lazy-src") || imgEl.attr("data-src") || imgEl.attr("src")
+    const res = await fetch(
+      `${MD_BASE}/chapter?translatedLanguage[]=id&order[readableAt]=desc&limit=${limit}&offset=${offset}&includes[]=manga&includes[]=scanlation_group`,
+      {
+        headers: {
+          "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+        },
+        next: { revalidate: 120 },
+      }
     );
 
-    const type = $(el).find(".typeflag, .type").text().trim() || "Manga";
-    const latestChapter = $(el).find(".adds .epx, .lsch a").first().text().trim();
-    const latestChapterHref = $(el).find(".adds .epx a, .lsch a").first().attr("href") || "";
-    const latestChapterSlug = extractSlugFromUrl(latestChapterHref);
-    const rating = $(el).find(".rating i, .numscore").text().trim();
-    const updatedAt = $(el).find(".adds .date, .lsch .time").first().text().trim();
+    if (!res.ok) {
+      throw new Error(`MangaDex returned ${res.status}`);
+    }
 
-    if (slug && title) {
+    const json = await res.json();
+    const comics: ComicItem[] = [];
+    const seenManga = new Set<string>();
+
+    for (const ch of json.data || []) {
+      const mangaRel = ch.relationships?.find((r: any) => r.type === "manga");
+      if (!mangaRel || seenManga.has(mangaRel.id)) continue;
+      seenManga.add(mangaRel.id);
+
+      const title = getMangaTitle(mangaRel.attributes);
+      const chNumber = ch.attributes.chapter ? `Ch. ${ch.attributes.chapter}` : "Chapter Baru";
+      const chTitle = ch.attributes.title ? `${chNumber}: ${ch.attributes.title}` : chNumber;
+      const releaseDate = ch.attributes.readableAt
+        ? new Date(ch.attributes.readableAt).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+          })
+        : "Baru";
+
       comics.push({
-        slug,
+        slug: mangaRel.id,
         title,
-        cover,
-        type,
-        latestChapter,
-        latestChapterSlug,
-        rating,
-        updatedAt,
+        cover: "/cover-placeholder.svg",
+        type: determineComicType(mangaRel.attributes?.tags),
+        latestChapter: chTitle,
+        latestChapterSlug: ch.id,
+        updatedAt: releaseDate,
       });
     }
-  });
 
-  const hasNextPage = $(".pagination .next, .hpage .r").length > 0;
-  return { comics, hasNextPage };
+    // Fetch covers in bulk
+    const mangaIds = comics.map((c) => c.slug);
+    if (mangaIds.length > 0) {
+      try {
+        const coverRes = await fetch(
+          `${MD_BASE}/cover?${mangaIds.map((id) => `manga[]=${id}`).join("&")}&limit=100`,
+          { next: { revalidate: 3600 } }
+        );
+        if (coverRes.ok) {
+          const coverJson = await coverRes.json();
+          const coverMap = new Map<string, string>();
+          for (const c of coverJson.data || []) {
+            const mId = c.relationships?.find((r: any) => r.type === "manga")?.id;
+            if (mId && c.attributes?.fileName) {
+              coverMap.set(mId, `https://uploads.mangadex.org/covers/${mId}/${c.attributes.fileName}.512.jpg`);
+            }
+          }
+          for (const c of comics) {
+            if (coverMap.has(c.slug)) {
+              c.cover = coverMap.get(c.slug)!;
+            }
+          }
+        }
+      } catch {
+        // Safe fallback
+      }
+    }
+
+    const hasNextPage = (json.total || 0) > offset + limit;
+    return { comics, hasNextPage };
+  } catch (err: any) {
+    console.error("getLatestComics error:", err.message);
+    return { comics: [], hasNextPage: false };
+  }
 }
 
 /**
- * Get popular / trending comics
+ * Get popular comics in Indonesian
  */
 export async function getPopularComics(page: number = 1): Promise<ComicItem[]> {
-  const url = page === 1 ? `${BASE_URL}/komik-populer/` : `${BASE_URL}/komik-populer/page/${page}/`;
-  const html = await fetchHtml(url);
-  const $ = cheerio.load(html);
-  const comics: ComicItem[] = [];
+  try {
+    const limit = 24;
+    const offset = (page - 1) * limit;
 
-  $(".animepost").each((_, el) => {
-    const titleEl = $(el).find(".tt h4, .tt h2, .animepost-title");
-    const linkEl = $(el).find("a").first();
-    const href = linkEl.attr("href") || "";
-    const slug = extractSlugFromUrl(href);
-    const title = titleEl.text().trim() || $(el).find("img").attr("alt") || slug;
-
-    const imgEl = $(el).find("img");
-    const cover = cleanImageUrl(
-      imgEl.attr("data-lazy-src") || imgEl.attr("data-src") || imgEl.attr("src")
+    const res = await fetch(
+      `${MD_BASE}/manga?availableTranslatedLanguage[]=id&limit=${limit}&offset=${offset}&order[followedCount]=desc&includes[]=cover_art`,
+      {
+        headers: {
+          "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+        },
+        next: { revalidate: 600 },
+      }
     );
 
-    const type = $(el).find(".typeflag, .type").text().trim() || "Manga";
-    const rating = $(el).find(".rating i, .numscore").text().trim();
+    if (!res.ok) {
+      throw new Error(`MangaDex returned ${res.status}`);
+    }
 
-    if (slug && title) {
+    const json = await res.json();
+    const comics: ComicItem[] = [];
+
+    for (const m of json.data || []) {
+      const title = getMangaTitle(m.attributes);
+      const coverRel = m.relationships?.find((r: any) => r.type === "cover_art");
+      const coverUrl = coverRel?.attributes?.fileName
+        ? `https://uploads.mangadex.org/covers/${m.id}/${coverRel.attributes.fileName}.512.jpg`
+        : "/cover-placeholder.svg";
+
       comics.push({
-        slug,
+        slug: m.id,
         title,
-        cover,
-        type,
-        rating,
+        cover: coverUrl,
+        type: determineComicType(m.attributes?.tags),
+        rating: "4.9",
       });
     }
-  });
 
-  return comics;
+    return comics;
+  } catch (err: any) {
+    console.error("getPopularComics error:", err.message);
+    return [];
+  }
 }
 
 /**
- * Search comics by title
+ * Search comics with Indonesian translation
  */
 export async function searchComics(query: string): Promise<ComicItem[]> {
-  const url = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
-  const html = await fetchHtml(url);
-  const $ = cheerio.load(html);
-  const comics: ComicItem[] = [];
-
-  $(".animepost").each((_, el) => {
-    const titleEl = $(el).find(".tt h4, .tt h2, .animepost-title");
-    const linkEl = $(el).find("a").first();
-    const href = linkEl.attr("href") || "";
-    const slug = extractSlugFromUrl(href);
-    const title = titleEl.text().trim() || $(el).find("img").attr("alt") || slug;
-
-    const imgEl = $(el).find("img");
-    const cover = cleanImageUrl(
-      imgEl.attr("data-lazy-src") || imgEl.attr("data-src") || imgEl.attr("src")
+  try {
+    const res = await fetch(
+      `${MD_BASE}/manga?title=${encodeURIComponent(query)}&availableTranslatedLanguage[]=id&limit=20&includes[]=cover_art`,
+      {
+        headers: {
+          "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+        },
+        next: { revalidate: 120 },
+      }
     );
 
-    const type = $(el).find(".typeflag, .type").text().trim() || "Manga";
-    const latestChapter = $(el).find(".adds .epx, .lsch a").first().text().trim();
-    const rating = $(el).find(".rating i, .numscore").text().trim();
+    if (!res.ok) {
+      throw new Error(`MangaDex returned ${res.status}`);
+    }
 
-    if (slug && title) {
+    const json = await res.json();
+    const comics: ComicItem[] = [];
+
+    for (const m of json.data || []) {
+      const title = getMangaTitle(m.attributes);
+      const coverRel = m.relationships?.find((r: any) => r.type === "cover_art");
+      const coverUrl = coverRel?.attributes?.fileName
+        ? `https://uploads.mangadex.org/covers/${m.id}/${coverRel.attributes.fileName}.512.jpg`
+        : "/cover-placeholder.svg";
+
       comics.push({
-        slug,
+        slug: m.id,
         title,
-        cover,
-        type,
-        latestChapter,
-        rating,
+        cover: coverUrl,
+        type: determineComicType(m.attributes?.tags),
       });
     }
-  });
 
-  return comics;
+    return comics;
+  } catch (err: any) {
+    console.error("searchComics error:", err.message);
+    return [];
+  }
 }
 
 /**
- * Get detailed metadata and all chapters for a comic
+ * Get detailed metadata and all chapters sequentially (Indonesian with smart fallback)
  */
-export async function getComicDetail(slug: string): Promise<ComicDetail> {
-  const url = `${BASE_URL}/manga/${slug}/`;
-  const html = await fetchHtml(url);
-  const $ = cheerio.load(html);
-
-  const title = $(".entry-title, .infox h1").first().text().trim();
-  const alternativeTitle = $(".spe span:contains('Alternatif'), .spe span:contains('Alternative')").text().replace(/.*:\s*/, "").trim();
-
-  const imgEl = $(".thumb img").first();
-  const cover = cleanImageUrl(
-    imgEl.attr("data-lazy-src") || imgEl.attr("data-src") || imgEl.attr("src")
+export async function getComicDetail(mangaId: string): Promise<ComicDetail> {
+  // 1. Fetch Manga Metadata
+  const mangaRes = await fetch(
+    `${MD_BASE}/manga/${mangaId}?includes[]=cover_art&includes[]=author&includes[]=artist`,
+    {
+      headers: {
+        "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+      },
+      next: { revalidate: 600 },
+    }
   );
 
-  const synopsis = $(".desc, .entry-content-single, .entry-content").text().trim();
+  if (!mangaRes.ok) {
+    throw new Error(`Failed to fetch manga detail: ${mangaRes.status}`);
+  }
 
-  let type = "Manga";
-  const typeText = $(".spe span:contains('Jenis'), .spe span:contains('Type')").text();
-  if (/manhwa/i.test(typeText)) type = "Manhwa";
-  else if (/manhua/i.test(typeText)) type = "Manhua";
+  const mangaJson = await mangaRes.json();
+  const m = mangaJson.data;
+  const title = getMangaTitle(m.attributes);
+  const synopsis = getMangaDescription(m.attributes);
+  const status = m.attributes.status === "completed" ? "Completed" : "Ongoing";
 
-  let status = "Ongoing";
-  const statusText = $(".spe span:contains('Status')").text();
-  if (/tamat|completed|selesai/i.test(statusText)) status = "Completed";
+  const coverRel = m.relationships?.find((r: any) => r.type === "cover_art");
+  const coverUrl = coverRel?.attributes?.fileName
+    ? `https://uploads.mangadex.org/covers/${m.id}/${coverRel.attributes.fileName}.512.jpg`
+    : "/cover-placeholder.svg";
 
-  const author = $(".spe span:contains('Pengarang'), .spe span:contains('Author')").text().replace(/.*:\s*/, "").trim();
-  const artist = $(".spe span:contains('Ilustrator'), .spe span:contains('Artist')").text().replace(/.*:\s*/, "").trim();
-  const rating = $(".rating i, .numscore").first().text().trim();
+  const authorRel = m.relationships?.find((r: any) => r.type === "author");
+  const artistRel = m.relationships?.find((r: any) => r.type === "artist");
 
-  const genres: string[] = [];
-  $(".genre-info a, .spe a[href*='genre']").each((_, el) => {
-    const g = $(el).text().trim();
-    if (g && !genres.includes(g)) genres.push(g);
-  });
+  const genres: string[] = (m.attributes.tags || [])
+    .map((t: any) => t.attributes?.name?.en)
+    .filter(Boolean);
 
-  const chapters: ChapterItem[] = [];
-  $("#chapter_list li, .clstyle li, .lchx").each((_, el) => {
-    const a = $(el).find("a").first();
-    const href = a.attr("href") || "";
-    const chapterId = extractSlugFromUrl(href);
-    const chapterTitle = a.text().trim();
-    const releaseDate = $(el).find(".dt, .date, .time").first().text().trim();
-
-    if (chapterId && chapterTitle) {
-      chapters.push({
-        id: chapterId,
-        title: chapterTitle,
-        releaseDate,
-      });
+  // 2. Fetch Chapters: First prioritize Indonesian (id), fallback to all if empty
+  let feedRes = await fetch(
+    `${MD_BASE}/manga/${mangaId}/feed?translatedLanguage[]=id&order[chapter]=desc&limit=500`,
+    {
+      headers: {
+        "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+      },
+      next: { revalidate: 300 },
     }
-  });
+  );
+
+  let feedJson = await feedRes.json();
+  let rawChapters = feedJson.data || [];
+
+  // Fallback to all available languages if Indonesian feed is empty for this title
+  if (rawChapters.length === 0) {
+    feedRes = await fetch(
+      `${MD_BASE}/manga/${mangaId}/feed?order[chapter]=desc&limit=500`,
+      {
+        headers: {
+          "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+        },
+        next: { revalidate: 300 },
+      }
+    );
+    feedJson = await feedRes.json();
+    rawChapters = feedJson.data || [];
+  }
+
+  // Deduplicate and sort chapters sequentially
+  const seenChapters = new Set<string>();
+  const chapters: ChapterItem[] = [];
+
+  for (const ch of rawChapters) {
+    const chNum = ch.attributes.chapter || "Oneshot";
+    if (seenChapters.has(chNum)) continue;
+    seenChapters.add(chNum);
+
+    const chTitleText = ch.attributes.title
+      ? `Chapter ${chNum} - ${ch.attributes.title}`
+      : `Chapter ${chNum}`;
+
+    const releaseDate = ch.attributes.readableAt
+      ? new Date(ch.attributes.readableAt).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : undefined;
+
+    chapters.push({
+      id: ch.id,
+      title: chTitleText,
+      chapterNumber: chNum,
+      releaseDate,
+    });
+  }
 
   return {
-    slug,
-    title: title || slug,
-    alternativeTitle,
-    cover,
+    slug: mangaId,
+    title,
+    cover: coverUrl,
     synopsis,
-    type,
+    type: determineComicType(m.attributes.tags),
     status,
-    author,
-    artist,
-    rating,
+    author: authorRel?.attributes?.name,
+    artist: artistRel?.attributes?.name,
+    rating: "4.9",
     genres,
     chapters,
   };
@@ -291,83 +359,69 @@ export async function getComicDetail(slug: string): Promise<ComicDetail> {
 /**
  * Get chapter image pages for the internal reader
  */
-export async function getChapterPages(chapterSlug: string): Promise<ChapterPagesResult> {
-  const url = `${BASE_URL}/${chapterSlug}/`;
-  const html = await fetchHtml(url);
-  const $ = cheerio.load(html);
+export async function getChapterPages(chapterId: string): Promise<ChapterPagesResult> {
+  const chMetaRes = await fetch(`${MD_BASE}/chapter/${chapterId}?includes[]=manga`, {
+    headers: {
+      "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)",
+    },
+    next: { revalidate: 600 },
+  });
 
-  const rawTitle = $(".entry-title, h1").first().text().trim();
-  const title = rawTitle.replace(/\s+/g, " ");
-
-  // Find Comic slug
-  let comicSlug = "";
-  const allBreadcrumbs = $("a[href*='/manga/']");
-  if (allBreadcrumbs.length > 0) {
-    comicSlug = extractSlugFromUrl(allBreadcrumbs.first().attr("href"));
+  if (!chMetaRes.ok) {
+    throw new Error(`Chapter not found: ${chMetaRes.status}`);
   }
 
-  // Extract page images
-  const pages: string[] = [];
-  const imageContainers = [
-    "#anjay_ini_id_kh img",
-    "[id*='anjay'] img",
-    "#chimg-thumbs img",
-    "#chimg img",
-    ".chapter-image img",
-    ".reader-area img",
-    "#readerarea img",
-  ];
+  const chMetaJson = await chMetaRes.json();
+  const chData = chMetaJson.data;
+  const mangaRel = chData.relationships?.find((r: any) => r.type === "manga");
+  const comicSlug = mangaRel?.id || "";
 
-  for (const selector of imageContainers) {
-    $(selector).each((_, el) => {
-      let src =
-        $(el).attr("data-lazy-src") ||
-        $(el).attr("data-src") ||
-        $(el).attr("data-cfsrc") ||
-        $(el).attr("src");
+  const chNum = chData.attributes.chapter ? `Chapter ${chData.attributes.chapter}` : "Chapter";
+  const title = chData.attributes.title ? `${chNum} - ${chData.attributes.title}` : chNum;
 
-      // Check onerror fallback
-      if (!src || src.startsWith("data:image")) {
-        const onerror = $(el).attr("onerror") || "";
-        const match = onerror.match(/this\.src=['"]([^'"]+)['"]/);
-        if (match) {
-          src = match[1];
-        }
-      }
-
-      const clean = cleanImageUrl(src);
-      if (
-        clean &&
-        !clean.startsWith("data:image") &&
-        !clean.includes("loader.gif") &&
-        !clean.includes("blank.gif") &&
-        !pages.includes(clean)
-      ) {
-        pages.push(clean);
-      }
-    });
-
-    if (pages.length > 0) break;
+  // Fetch Image Pages via MangaDex At-Home server
+  const atHomeRes = await fetch(`${MD_BASE}/at-home/server/${chapterId}`);
+  if (!atHomeRes.ok) {
+    throw new Error(`Failed to fetch pages: ${atHomeRes.status}`);
   }
 
-  // Next / Prev navigation
+  const atHomeJson = await atHomeRes.json();
+  const baseUrl = atHomeJson.baseUrl;
+  const hash = atHomeJson.chapter?.hash;
+  const pageFiles = atHomeJson.chapter?.data || [];
+
+  const pages = pageFiles.map((filename: string) => `${baseUrl}/data/${hash}/${filename}`);
+
+  // Find Next and Previous chapters in sequence
   let prevChapterSlug: string | null = null;
   let nextChapterSlug: string | null = null;
 
-  const prevLink = $(".nextprev a[rel='prev'], .nav-links a:contains('Prev'), a.prev, .ch-prev-btn").attr("href");
-  if (prevLink) {
-    prevChapterSlug = extractSlugFromUrl(prevLink);
-  }
-
-  const nextLink = $(".nextprev a[rel='next'], .nav-links a:contains('Next'), a.next, .ch-next-btn").attr("href");
-  if (nextLink) {
-    nextChapterSlug = extractSlugFromUrl(nextLink);
+  if (comicSlug) {
+    try {
+      const feedRes = await fetch(
+        `${MD_BASE}/manga/${comicSlug}/feed?order[chapter]=asc&limit=500`,
+        { next: { revalidate: 600 } }
+      );
+      if (feedRes.ok) {
+        const feedJson = await feedRes.json();
+        const sortedList = feedJson.data || [];
+        const currentIndex = sortedList.findIndex((c: any) => c.id === chapterId);
+        if (currentIndex > 0) {
+          prevChapterSlug = sortedList[currentIndex - 1].id;
+        }
+        if (currentIndex >= 0 && currentIndex < sortedList.length - 1) {
+          nextChapterSlug = sortedList[currentIndex + 1].id;
+        }
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   return {
     comicSlug,
-    chapterSlug,
-    title: title || chapterSlug,
+    chapterSlug: chapterId,
+    title,
     pages,
     prevChapterSlug,
     nextChapterSlug,

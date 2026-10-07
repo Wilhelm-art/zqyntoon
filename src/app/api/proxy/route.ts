@@ -55,16 +55,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access to private or restricted network address is denied." }, { status: 403 });
     }
 
-    // Forward request with required anti-hotlink bypass headers
-    const upstreamResponse = await fetch(parsedUrl.toString(), {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-        "Referer": "https://bacakomik.my/",
-        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-        "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-      },
-    });
+    // Adaptive headers based on upstream host
+    const headers: Record<string, string> = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+    };
+
+    if (parsedUrl.hostname.includes("mangadex")) {
+      headers["Referer"] = "https://mangadex.org/";
+    } else {
+      headers["Referer"] = "https://bacakomik.my/";
+    }
+
+    const upstreamResponse = await fetch(parsedUrl.toString(), { headers });
 
     if (!upstreamResponse.ok) {
       return NextResponse.json(
