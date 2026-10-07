@@ -33,26 +33,19 @@ export function MangaCard({ comic, priority = false }: MangaCardProps) {
     >
       {/* Thumbnail Aspect 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#171A23]">
-        {/* Subtle blurred ambient backdrop to enhance colors and fill framing */}
-        <div className="absolute inset-0 filter blur-xl scale-110 opacity-30 pointer-events-none">
-          <Image
-            src={imgError ? "/cover-placeholder.svg" : proxiedCover}
-            alt=""
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        </div>
+        {/* Subtle ambient CSS glow */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5 opacity-50 pointer-events-none" />
 
         <Image
           src={imgError ? "/cover-placeholder.svg" : proxiedCover}
           alt={comic.title}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          sizes="(max-width: 640px) 160px, (max-width: 1024px) 220px, 200px"
+          quality={75}
           priority={priority}
+          loading={priority ? "eager" : "lazy"}
           className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
           onError={() => setImgError(true)}
-          unoptimized
         />
 
         {/* Gradient overlay: Subtle at top, delicate fade at bottom for badge contrast without dimming cover artwork */}

@@ -87,7 +87,9 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400",
+        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+        "CDN-Cache-Control": "public, max-age=31536000",
+        "Vercel-CDN-Cache-Control": "public, max-age=31536000",
         "X-Proxied-By": "ZqynToon-Edge-Proxy",
       },
     });

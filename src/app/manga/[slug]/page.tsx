@@ -94,17 +94,9 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero Backdrop with Blur */}
+      {/* Hero Backdrop with Ambient Glow */}
       <section className="relative w-full overflow-hidden bg-[#0A0C12] border-b border-white/5">
-        <div className="absolute inset-0 overflow-hidden opacity-20 filter blur-3xl scale-125 pointer-events-none">
-          <Image
-            src={proxiedCover}
-            alt=""
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        </div>
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[#F27D26]/10 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
           <div className="flex flex-col md:flex-row gap-8 lg:gap-12 items-start">
@@ -115,8 +107,9 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                 alt={comic.title}
                 fill
                 priority
+                sizes="(max-width: 640px) 176px, (max-width: 1024px) 224px, 256px"
+                quality={80}
                 className="object-cover object-top"
-                unoptimized
               />
               <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                 <span className={`px-2.5 py-1 text-xs font-bold uppercase rounded-lg border backdrop-blur-md ${typeColor}`}>

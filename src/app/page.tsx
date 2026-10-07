@@ -38,16 +38,8 @@ export default async function HomePage() {
       {/* 1. Hero Spotlight Banner */}
       {featuredComic && (
         <section className="relative w-full overflow-hidden border-b border-white/5 bg-[#0F1117]">
-          {/* Ambient blurred backdrop */}
-          <div className="absolute inset-0 overflow-hidden opacity-25 filter blur-3xl scale-110 pointer-events-none">
-            <Image
-              src={featuredCover}
-              alt=""
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          {/* Ambient luminous glow (Zero network request, pure CSS) */}
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[#F27D26]/12 blur-[120px] rounded-full pointer-events-none" />
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col md:flex-row items-center gap-8 md:gap-12">
             {/* Cover Card */}
@@ -58,8 +50,9 @@ export default async function HomePage() {
                 fill
                 priority
                 fetchPriority="high"
+                sizes="(max-width: 640px) 192px, (max-width: 768px) 240px, 288px"
+                quality={80}
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                unoptimized
               />
               <div className="absolute top-3 left-3">
                 <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-[#F27D26] text-black rounded-lg shadow-md flex items-center gap-1">
@@ -151,7 +144,7 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
             {popularList.slice(0, 12).map((comic, idx) => (
-              <MangaCard key={comic.slug} comic={comic} priority={idx < 6} />
+              <MangaCard key={comic.slug} comic={comic} priority={idx < 2} />
             ))}
           </div>
         </section>

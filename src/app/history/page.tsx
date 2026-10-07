@@ -46,8 +46,9 @@ export default function HistoryPage() {
                     src={proxiedCover}
                     alt={item.comicTitle}
                     fill
+                    sizes="80px"
+                    quality={75}
                     className="object-cover object-top"
-                    unoptimized
                   />
                 </div>
 
