@@ -46,7 +46,7 @@ export default function HistoryPage() {
                     src={proxiedCover}
                     alt={item.comicTitle}
                     fill
-                    className="object-cover"
+                    className="object-cover object-top"
                     unoptimized
                   />
                 </div>

@@ -33,22 +33,33 @@ export function MangaCard({ comic, priority = false }: MangaCardProps) {
     >
       {/* Thumbnail Aspect 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#171A23]">
+        {/* Subtle blurred ambient backdrop to enhance colors and fill framing */}
+        <div className="absolute inset-0 filter blur-xl scale-110 opacity-30 pointer-events-none">
+          <Image
+            src={imgError ? "/cover-placeholder.svg" : proxiedCover}
+            alt=""
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        </div>
+
         <Image
           src={imgError ? "/cover-placeholder.svg" : proxiedCover}
           alt={comic.title}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           priority={priority}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
           onError={() => setImgError(true)}
           unoptimized
         />
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1117] via-transparent to-black/30 opacity-80 group-hover:opacity-60 transition-opacity" />
+        {/* Gradient overlay: Subtle at top, delicate fade at bottom for badge contrast without dimming cover artwork */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1117]/90 via-[#0F1117]/10 to-black/20 pointer-events-none group-hover:opacity-75 transition-opacity" />
 
         {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1">
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 z-10">
           {comic.type && (
             <span
               className={`px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded-md border backdrop-blur-md ${typeColor}`}

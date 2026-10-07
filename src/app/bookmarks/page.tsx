@@ -46,7 +46,7 @@ export default function BookmarksPage() {
                     src={proxiedCover}
                     alt={comic.title}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                     unoptimized
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0F1117] via-transparent to-transparent opacity-80" />

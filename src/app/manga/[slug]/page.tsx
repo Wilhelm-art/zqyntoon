@@ -115,7 +115,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                 alt={comic.title}
                 fill
                 priority
-                className="object-cover"
+                className="object-cover object-top"
                 unoptimized
               />
               <div className="absolute top-3 left-3 flex flex-col gap-1.5">

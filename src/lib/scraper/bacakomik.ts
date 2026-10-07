@@ -64,6 +64,33 @@ function slugify(title: string): string {
     .replace(/^-|-$/g, "");
 }
 
+/**
+ * Remove downscaling/letterboxing query params (?resize=240,150, quality=60, w=...)
+ * so we get the full-resolution, uncropped 3:4 portrait cover artwork.
+ */
+function cleanCoverUrl(rawUrl: string): string {
+  if (!rawUrl) return "/cover-placeholder.svg";
+  let url = rawUrl.trim();
+  if (url.startsWith("//")) url = "https:" + url;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("komiku")) {
+      parsed.searchParams.delete("resize");
+      parsed.searchParams.delete("quality");
+      parsed.searchParams.delete("w");
+      return parsed.toString();
+    }
+  } catch {
+    url = url
+      .replace(/[?&]resize=[^&]+/g, "")
+      .replace(/[?&]quality=[^&]+/g, "")
+      .replace(/[?&]w=[^&]+/g, "");
+  }
+
+  return url;
+}
+
 /* =========================================================================
  * 1. KOMIKU SCRAPER ENGINE (Complete Indonesian Scanlations with All Chapters)
  * ========================================================================= */
@@ -87,8 +114,8 @@ async function fetchKomikuLatest(page: number = 1): Promise<{ comics: ComicItem[
     const link = $(el).find(".kan a").first().attr("href") || $(el).find(".bgei a").first().attr("href") || "";
     const slug = link.replace(/.*\/manga\//, "").replace(/\/$/, "");
     const title = $(el).find("h3").first().text().trim();
-    let cover = $(el).find("img").first().attr("src") || "";
-    if (cover.startsWith("//")) cover = "https:" + cover;
+    const rawCover = $(el).find("img").first().attr("src") || "";
+    const cover = cleanCoverUrl(rawCover);
 
     const type = $(el).find(".tpe1_inf b").first().text().trim() || "Manga";
     const latestA = $(el).find(".new1 a").last();
@@ -151,8 +178,8 @@ async function fetchKomikuPopular(): Promise<ComicItem[]> {
 
   $("article.ls2").each((_, el) => {
     const title = $(el).find("h3 a").text().trim();
-    let cover = $(el).find("img").attr("src") || "";
-    if (cover.startsWith("//")) cover = "https:" + cover;
+    const rawCover = $(el).find("img").attr("src") || "";
+    const cover = cleanCoverUrl(rawCover);
     const redirectHref = $(el).find("a[href*='idSeries']").first().attr("href") || "";
 
     let slug = "";
@@ -205,8 +232,8 @@ async function fetchKomikuSearch(query: string): Promise<ComicItem[]> {
     const link = $(el).find(".kan a").first().attr("href") || $(el).find(".bgei a").first().attr("href") || "";
     const slug = link.replace(/.*\/manga\//, "").replace(/\/$/, "");
     const title = $(el).find("h3").first().text().trim();
-    let cover = $(el).find("img").first().attr("src") || "";
-    if (cover.startsWith("//")) cover = "https:" + cover;
+    const rawCover = $(el).find("img").first().attr("src") || "";
+    const cover = cleanCoverUrl(rawCover);
 
     const type = $(el).find(".tpe1_inf b").first().text().trim() || "Manga";
     const latestA = $(el).find(".new1 a").last();
@@ -263,11 +290,11 @@ async function fetchKomikuDetail(slug: string): Promise<ComicDetail> {
     title = $("#Judul h1").text().replace(/^Komik\s+/i, "").trim() || slug;
   }
 
-  let cover =
+  const rawCover =
     $("section#Informasi img[itemprop='image']").attr("src") ||
     $("section#Informasi img").first().attr("src") ||
     "/cover-placeholder.svg";
-  if (cover.startsWith("//")) cover = "https:" + cover;
+  const cover = cleanCoverUrl(rawCover);
 
   const synopsis =
     $("p.desc, section#Informasi p").first().text().trim() ||
