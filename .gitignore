@@ -39,3 +39,6 @@ next-env.d.ts
 skills-lock.json
 scripts/test*.mjs
 scripts/inspect*.mjs
+supabase/.temp/
+test*.js
+test*.mjs
