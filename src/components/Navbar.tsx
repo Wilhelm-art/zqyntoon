@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 import { Search, Bookmark, History, Flame, Clock, Compass, Menu, X } from "lucide-react";
 import { SearchModal } from "@/components/SearchModal";
 import { useBookmarkStore } from "@/store/bookmarkStore";
+import { useSearchStore } from "@/store/searchStore";
 
 export function Navbar() {
   const pathname = usePathname();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const { isOpen: searchOpen, openSearch, closeSearch } = useSearchStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const bookmarks = useBookmarkStore((state) => state.bookmarks);
 
@@ -76,7 +77,7 @@ export function Navbar() {
           {/* Search CTA & Mobile Toggle */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSearchOpen(true)}
+              onClick={openSearch}
               className="flex items-center gap-2.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0F1117] border border-white/10 hover:border-[#F27D26]/40 text-gray-400 hover:text-gray-200 text-sm transition-all shadow-inner"
             >
               <Search className="w-4 h-4 text-[#F27D26]" />
@@ -132,7 +133,7 @@ export function Navbar() {
       </header>
 
       {/* Interactive Global Search Modal */}
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchModal isOpen={searchOpen} onClose={closeSearch} />
     </>
   );
 }

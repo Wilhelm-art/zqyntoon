@@ -1,14 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  themeColor: "#07080B",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.vercel.app"),
@@ -35,6 +43,11 @@ export const metadata: Metadata = {
     email: false,
     address: false,
     telephone: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "ZqynToon",
   },
   openGraph: {
     type: "website",
@@ -93,6 +106,12 @@ export default function RootLayout({
   return (
     <html lang="id" className="dark">
       <head>
+        <link rel="preconnect" href="https://thumbnail.komiku.org" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://thumbnail.komiku.to" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://uploads.mangadex.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://thumbnail.komiku.org" />
+        <link rel="dns-prefetch" href="https://thumbnail.komiku.to" />
+        <link rel="dns-prefetch" href="https://uploads.mangadex.org" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -100,8 +119,9 @@ export default function RootLayout({
       </head>
       <body className={`${plusJakartaSans.variable} font-sans min-h-screen flex flex-col bg-[#07080B] text-gray-100`}>
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <Footer />
+        <MobileBottomNav />
       </body>
     </html>
   );

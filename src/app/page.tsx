@@ -57,6 +57,7 @@ export default async function HomePage() {
                 alt={featuredComic.title}
                 fill
                 priority
+                fetchPriority="high"
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                 unoptimized
               />

@@ -14,6 +14,7 @@ interface ComicDetailClientProps {
 export function ComicDetailClient({ comic }: ComicDetailClientProps) {
   const [chapterSearch, setChapterSearch] = useState("");
   const [sortDescending, setSortDescending] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(48);
 
   const { isBookmarked, addBookmark, removeBookmark } = useBookmarkStore();
   const { getComicProgress } = useHistoryStore();
@@ -46,6 +47,7 @@ export function ComicDetailClient({ comic }: ComicDetailClientProps) {
     });
 
   const displayChapters = sortDescending ? filteredChapters : [...filteredChapters].reverse();
+  const pagedChapters = chapterSearch.trim() ? displayChapters : displayChapters.slice(0, visibleCount);
 
   // Determine starting chapter for CTA
   const firstChapter = comic.chapters[comic.chapters.length - 1];
@@ -129,8 +131,8 @@ export function ComicDetailClient({ comic }: ComicDetailClientProps) {
         </div>
 
         {/* Chapter Grid / List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[600px] overflow-y-auto pr-1">
-          {displayChapters.map((ch) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {pagedChapters.map((ch) => {
             const isRead = readingProgress?.chapterId === ch.id;
 
             return (
@@ -173,6 +175,29 @@ export function ComicDetailClient({ comic }: ComicDetailClientProps) {
             </div>
           )}
         </div>
+
+        {/* Load More Pagination Bar */}
+        {!chapterSearch.trim() && visibleCount < displayChapters.length && (
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/5">
+            <span className="text-xs text-gray-400">
+              Menampilkan <strong>{Math.min(visibleCount, displayChapters.length)}</strong> dari <strong>{displayChapters.length}</strong> chapter
+            </span>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 48)}
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10 transition-colors"
+              >
+                Muat 48 Lagi
+              </button>
+              <button
+                onClick={() => setVisibleCount(displayChapters.length)}
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-[#F27D26]/10 hover:bg-[#F27D26]/20 text-[#F27D26] text-xs font-semibold border border-[#F27D26]/30 transition-colors"
+              >
+                Tampilkan Semua
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

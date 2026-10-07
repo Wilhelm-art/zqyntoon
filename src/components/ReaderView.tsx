@@ -34,9 +34,12 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const [showControls, setShowControls] = useState(true);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [brightness, setBrightness] = useState(100);
+  const [chapterDrawerOpen, setChapterDrawerOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
   const totalPages = initialData.pages.length;
 
   // Track progress into history store
@@ -114,6 +117,25 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(deltaX) > 40) {
+      if (deltaX < 0) {
+        // Swipe Left -> Next Page
+        if (currentPageIndex < totalPages - 1) setCurrentPageIndex((p) => p + 1);
+      } else {
+        // Swipe Right -> Prev Page
+        if (currentPageIndex > 0) setCurrentPageIndex((p) => p - 1);
+      }
+    }
+    touchStartX.current = null;
+  };
+
   const widthClass =
     imageWidth === "narrow"
       ? "max-w-2xl"
@@ -128,7 +150,8 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[#07080B] text-gray-100 flex flex-col select-none relative"
+      style={{ filter: brightness < 100 ? `brightness(${brightness}%)` : undefined }}
+      className="min-h-screen bg-[#07080B] text-gray-100 flex flex-col select-none relative transition-[filter]"
       onClick={() => {
         // Toggle controls on canvas click
         if (settingsOpen) setSettingsOpen(false);
@@ -142,9 +165,9 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3">
           {/* Back & Title */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <Link
               href={`/manga/${initialData.comicSlug || comicDetail?.slug || ""}`}
               className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors shrink-0"
@@ -154,36 +177,47 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
             </Link>
 
             <div className="truncate">
-              <h1 className="text-sm font-bold text-white truncate leading-tight">
+              <h1 className="text-xs sm:text-sm font-bold text-white truncate leading-tight">
                 {comicDetail?.title || initialData.title}
               </h1>
-              <p className="text-[11px] text-[#F27D26] truncate font-medium">
+              <p className="text-[10px] sm:text-[11px] text-[#F27D26] truncate font-medium">
                 {initialData.title}
               </p>
             </div>
           </div>
 
-          {/* Center: Chapter Quick Selector */}
+          {/* Center: Chapter Quick Selector (Desktop & Mobile Drawer Button) */}
           {comicDetail && comicDetail.chapters.length > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5">
-              <select
-                value={initialData.chapterSlug}
-                onChange={(e) => {
-                  router.push(`/manga/${comicDetail.slug}/${e.target.value}`);
-                }}
-                className="bg-[#141722] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-[#F27D26]"
+            <>
+              <div className="hidden sm:flex items-center gap-1.5">
+                <select
+                  value={initialData.chapterSlug}
+                  onChange={(e) => {
+                    router.push(`/manga/${comicDetail.slug}/${e.target.value}`);
+                  }}
+                  className="bg-[#141722] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-[#F27D26]"
+                >
+                  {comicDetail.chapters.map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => setChapterDrawerOpen(true)}
+                className="sm:hidden px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors text-[11px] font-semibold flex items-center gap-1 shrink-0"
+                title="Pilih Chapter"
               >
-                {comicDetail.chapters.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <BookOpen className="w-3.5 h-3.5 text-[#F27D26]" />
+                <span>Chapter</span>
+              </button>
+            </>
           )}
 
-          {/* Actions: Prev/Next Chapter & Settings */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Actions: Prev/Next Chapter & Settings & Fullscreen */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {initialData.prevChapterSlug && (
               <Link
                 href={`/manga/${initialData.comicSlug || comicDetail?.slug}/${initialData.prevChapterSlug}`}
@@ -206,7 +240,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
 
             <button
               onClick={() => setSettingsOpen(!settingsOpen)}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors ml-1"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
               title="Pengaturan Reader"
             >
               <Sliders className="w-4 h-4" />
@@ -214,8 +248,8 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
 
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors hidden sm:block"
-              title="Fullscreen"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+              title="Layar Penuh"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
@@ -292,6 +326,22 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
                 </button>
               </div>
             </div>
+
+            {/* Eye-Care Brightness Slider */}
+            <div className="space-y-1.5 mt-4 pt-3 border-t border-white/5">
+              <div className="flex justify-between text-xs text-gray-300">
+                <span>Kenyamanan Mata (Kecerahan):</span>
+                <span className="font-mono text-[#F27D26] font-semibold">{brightness}%</span>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="100"
+                value={brightness}
+                onChange={(e) => setBrightness(Number(e.target.value))}
+                className="w-full accent-[#F27D26] cursor-pointer h-1.5 bg-[#171A23] rounded-lg"
+              />
+            </div>
           </div>
         )}
       </header>
@@ -318,7 +368,11 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
               const isFailed = failedImages[idx];
 
               return (
-                <div key={idx} className="relative w-full bg-[#0D0E14] overflow-hidden min-h-[300px]">
+                <div
+                  key={idx}
+                  className="relative w-full bg-[#0D0E14] overflow-hidden min-h-[300px]"
+                  style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
+                >
                   {isFailed ? (
                     <div className="py-16 px-4 text-center space-y-3 bg-[#12141D] border border-white/5">
                       <p className="text-xs text-gray-400">Gagal memuat gambar lembar #{idx + 1}</p>
@@ -351,6 +405,8 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
           /* Paged Mode (Single Page) */
           <div
             className={`w-full ${widthClass} mx-auto flex flex-col items-center justify-center px-2 py-6`}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
             onClick={(e) => {
               // Click left half -> prev, click right half -> next
               const rect = e.currentTarget.getBoundingClientRect();
@@ -485,6 +541,62 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
           </div>
         </div>
       </footer>
+
+      {/* 5. Mobile Chapter Jump Drawer */}
+      {chapterDrawerOpen && comicDetail && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150"
+          onClick={(e) => {
+            e.stopPropagation();
+            setChapterDrawerOpen(false);
+          }}
+        >
+          <div
+            className="w-full sm:max-w-md bg-[#0F1117] border border-white/10 rounded-t-2xl sm:rounded-2xl max-h-[75vh] flex flex-col p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div>
+                <h3 className="text-sm font-bold text-white">Pilih Chapter</h3>
+                <p className="text-[11px] text-gray-400 truncate max-w-[260px]">{comicDetail.title}</p>
+              </div>
+              <button
+                onClick={() => setChapterDrawerOpen(false)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+
+            <div className="overflow-y-auto divide-y divide-white/5 py-2 space-y-1">
+              {comicDetail.chapters.map((ch) => {
+                const isCurrent = ch.id === initialData.chapterSlug;
+                return (
+                  <button
+                    key={ch.id}
+                    onClick={() => {
+                      setChapterDrawerOpen(false);
+                      router.push(`/manga/${comicDetail.slug}/${ch.id}`);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
+                      isCurrent
+                        ? "bg-[#F27D26]/15 text-[#F27D26] font-bold"
+                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <span className="truncate pr-2">{ch.title}</span>
+                    {isCurrent && (
+                      <span className="text-[10px] uppercase font-bold text-[#F27D26] shrink-0">
+                        Sedang Dibaca
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
