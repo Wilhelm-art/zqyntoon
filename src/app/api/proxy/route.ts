@@ -5,12 +5,19 @@ const ALLOWED_IMAGE_DOMAINS = [
   "komiku.org",
   "komiku.to",
   "komiku.id",
+  "komiku.vip",
+  "komiku.asia",
+  "cdn.komiku.to",
+  "img.komiku.id",
   "bacakomik.my",
   "mangadex.org",
   "mangadex.network",
   "wp.com",
   "blogspot.com",
   "googleusercontent.com",
+  "cloudinary.com",
+  "komikcdn.com",
+  "cdnkomiku.com",
 ];
 
 function isAllowedHost(hostname: string): boolean {
@@ -99,36 +106,62 @@ export async function GET(request: NextRequest) {
       headers["Referer"] = "https://bacakomik.my/";
     }
 
-    // Fetch upstream with manual redirect to prevent SSRF redirect bypass
-    let upstreamResponse = await fetch(parsedUrl.toString(), {
+    // Fetch upstream with manual redirect and timeout to prevent hanging sockets
+    let upstreamResponse: Response | null = null;
+    const fetchOptions: RequestInit = {
       headers,
       redirect: "manual",
-    });
+      signal: AbortSignal.timeout(12000),
+    };
 
-    // Handle single safe redirect hop if upstream redirects within allowed domain
-    if ([301, 302, 307, 308].includes(upstreamResponse.status)) {
-      const redirectLocation = upstreamResponse.headers.get("location");
-      if (!redirectLocation) {
-        return NextResponse.json({ error: "Upstream redirect location missing." }, { status: 502 });
+    // Retry loop (up to 2 attempts for transient upstream network hiccups)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        let res = await fetch(parsedUrl.toString(), fetchOptions);
+
+        // Handle single safe redirect hop if upstream redirects within allowed domain
+        if ([301, 302, 307, 308].includes(res.status)) {
+          const redirectLocation = res.headers.get("location");
+          if (!redirectLocation) {
+            return NextResponse.json({ error: "Upstream redirect location missing." }, { status: 502 });
+          }
+          const redirectUrl = new URL(redirectLocation, parsedUrl.origin);
+          if (
+            (redirectUrl.protocol !== "http:" && redirectUrl.protocol !== "https:") ||
+            isPrivateAddress(redirectUrl.hostname) ||
+            !isAllowedHost(redirectUrl.hostname)
+          ) {
+            return NextResponse.json({ error: "Redirect to untrusted address is denied." }, { status: 403 });
+          }
+          res = await fetch(redirectUrl.toString(), fetchOptions);
+        }
+
+        if (res.ok) {
+          upstreamResponse = res;
+          break;
+        }
+
+        if (attempt === 0 && (res.status >= 500 || res.status === 429)) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
+
+        upstreamResponse = res;
+        break;
+      } catch (err: any) {
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
+        throw err;
       }
-      const redirectUrl = new URL(redirectLocation, parsedUrl.origin);
-      if (
-        (redirectUrl.protocol !== "http:" && redirectUrl.protocol !== "https:") ||
-        isPrivateAddress(redirectUrl.hostname) ||
-        !isAllowedHost(redirectUrl.hostname)
-      ) {
-        return NextResponse.json({ error: "Redirect to untrusted address is denied." }, { status: 403 });
-      }
-      upstreamResponse = await fetch(redirectUrl.toString(), {
-        headers,
-        redirect: "manual",
-      });
     }
 
-    if (!upstreamResponse.ok) {
+    if (!upstreamResponse || !upstreamResponse.ok) {
+      const status = upstreamResponse?.status || 502;
       return NextResponse.json(
-        { error: `Upstream returned status ${upstreamResponse.status}` },
-        { status: upstreamResponse.status }
+        { error: `Upstream returned status ${status}` },
+        { status }
       );
     }
 
@@ -151,18 +184,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Image exceeds 15MB limit." }, { status: 413 });
     }
 
-    const contentType = rawContentType.startsWith("image/") ? rawContentType : "image/jpeg";
-    const imageBuffer = await upstreamResponse.arrayBuffer();
+    if (!upstreamResponse.body) {
+      return NextResponse.json({ error: "Empty upstream image body" }, { status: 502 });
+    }
 
-    return new NextResponse(imageBuffer, {
+    const contentType = rawContentType.startsWith("image/") ? rawContentType : "image/jpeg";
+    const responseHeaders = new Headers({
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+      "CDN-Cache-Control": "public, max-age=31536000",
+      "Vercel-CDN-Cache-Control": "public, max-age=31536000",
+      "X-Proxied-By": "ZqynToon-Edge-Proxy",
+    });
+
+    if (contentLength) {
+      responseHeaders.set("Content-Length", contentLength);
+    }
+
+    // Stream directly to client browser without buffering full image in memory
+    return new NextResponse(upstreamResponse.body, {
       status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
-        "CDN-Cache-Control": "public, max-age=31536000",
-        "Vercel-CDN-Cache-Control": "public, max-age=31536000",
-        "X-Proxied-By": "ZqynToon-Edge-Proxy",
-      },
+      headers: responseHeaders,
     });
   } catch (err: any) {
     console.error("Proxy error:", err?.message);

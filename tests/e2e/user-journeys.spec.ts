@@ -107,8 +107,12 @@ test.describe("ZqynToon - E2E User Journeys", () => {
     // Wait for reader URL
     await page.waitForURL(/\/manga\/[^\/]+\/[^\/]+/);
 
-    // Verify Reader header and controls
-    const readerHeader = page.locator("header.fixed").or(page.locator("header")).last();
+    // Verify global Navbar & global Footer are completely hidden in reader mode
+    await expect(page.locator("header.sticky")).toHaveCount(0);
+    await expect(page.locator("footer:has-text('Navigasi Cepat')")).toHaveCount(0);
+
+    // Verify Reader dedicated floating header and controls
+    const readerHeader = page.locator("header.fixed");
     await expect(readerHeader).toBeVisible();
 
     // Verify settings button

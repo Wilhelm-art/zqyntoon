@@ -14,6 +14,10 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const bookmarks = useBookmarkStore((state) => state.bookmarks);
 
+  // Sembunyikan global navbar di mode reader (/manga/[slug]/[chapterId]) agar tidak menutupi canvas baca komik
+  const isReadingChapter = /^\/manga\/[^\/]+\/[^\/]+/.test(pathname);
+  if (isReadingChapter) return null;
+
   const navLinks = [
     { href: "/", label: "Beranda", icon: Compass },
     { href: "/trending", label: "Populer", icon: Flame },

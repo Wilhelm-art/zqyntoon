@@ -23,6 +23,96 @@ interface ReaderViewProps {
   comicDetail?: ComicDetail;
 }
 
+interface WebtoonPageItemProps {
+  imgUrl: string;
+  idx: number;
+  isFailed?: boolean;
+  isLoaded?: boolean;
+  onRetry: (idx: number) => void;
+  onIntersect: (idx: number) => void;
+  onLoad: (idx: number) => void;
+  onError: (idx: number) => void;
+}
+
+function WebtoonPageItem({
+  imgUrl,
+  idx,
+  isFailed,
+  isLoaded,
+  onRetry,
+  onIntersect,
+  onLoad,
+  onError,
+}: WebtoonPageItemProps) {
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = itemRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            onIntersect(idx);
+          }
+        }
+      },
+      { rootMargin: "600px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [idx, onIntersect]);
+
+  const proxiedUrl = `/api/proxy?url=${encodeURIComponent(imgUrl)}`;
+
+  return (
+    <div
+      ref={itemRef}
+      className="relative w-full bg-[#0D0E14] overflow-hidden min-h-[300px]"
+    >
+      {isFailed ? (
+        <div className="py-16 px-4 text-center space-y-3 bg-[#12141D] border border-white/5">
+          <p className="text-xs text-gray-400">Gagal memuat gambar lembar #{idx + 1}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry(idx);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F27D26] text-black text-xs font-bold hover:bg-[#FFA24D] transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Coba Lagi
+          </button>
+        </div>
+      ) : (
+        <>
+          {!isLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0B0D12] animate-pulse">
+              <span className="text-[11px] font-mono text-gray-500">
+                Memuat lembar #{idx + 1}...
+              </span>
+            </div>
+          )}
+          <img
+            src={proxiedUrl}
+            alt={`Halaman ${idx + 1}`}
+            loading={idx < 4 ? "eager" : "lazy"}
+            decoding="async"
+            fetchPriority={idx === 0 ? "high" : idx < 4 ? "auto" : "low"}
+            className={`w-full h-auto block select-none transition-opacity duration-200 ${
+              isLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad={() => onLoad(idx)}
+            onError={() => onError(idx)}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const router = useRouter();
   const { readingMode, imageWidth, setReadingMode, setImageWidth } = useReaderStore();
@@ -35,10 +125,53 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const [brightness, setBrightness] = useState(100);
   const [chapterDrawerOpen, setChapterDrawerOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const preloadedUrls = useRef<Set<string>>(new Set());
   const totalPages = initialData.pages.length;
+
+  // Background image prefetcher for instant page transitions
+  const prefetchImageUrl = useCallback((rawUrl: string) => {
+    if (typeof window === "undefined" || !rawUrl) return;
+    const proxied = `/api/proxy?url=${encodeURIComponent(rawUrl)}`;
+    if (preloadedUrls.current.has(proxied)) return;
+    preloadedUrls.current.add(proxied);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = proxied;
+  }, []);
+
+  // Proactive initial prefetch: Warm up first 5 pages on chapter open
+  useEffect(() => {
+    if (!initialData.pages || initialData.pages.length === 0) return;
+    const initialBatch = initialData.pages.slice(0, 5);
+    initialBatch.forEach(prefetchImageUrl);
+  }, [initialData.pages, prefetchImageUrl]);
+
+  // Paged mode: Preload adjacent pages around current page index
+  useEffect(() => {
+    if (readingMode !== "paged" || !initialData.pages.length) return;
+    if (currentPageIndex + 1 < totalPages) prefetchImageUrl(initialData.pages[currentPageIndex + 1]);
+    if (currentPageIndex + 2 < totalPages) prefetchImageUrl(initialData.pages[currentPageIndex + 2]);
+    if (currentPageIndex - 1 >= 0) prefetchImageUrl(initialData.pages[currentPageIndex - 1]);
+  }, [currentPageIndex, readingMode, totalPages, initialData.pages, prefetchImageUrl]);
+
+  // Webtoon mode: Callback when a page enters proximity
+  const handlePageIntersect = useCallback(
+    (idx: number) => {
+      setCurrentPageIndex(idx);
+      // Prefetch up to 5 pages ahead
+      for (let offset = 1; offset <= 5; offset++) {
+        const targetIdx = idx + offset;
+        if (targetIdx < totalPages) {
+          prefetchImageUrl(initialData.pages[targetIdx]);
+        }
+      }
+    },
+    [totalPages, initialData.pages, prefetchImageUrl]
+  );
 
   // Track progress into history store
   useEffect(() => {
@@ -54,12 +187,29 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
     }
   }, [comicDetail, initialData, currentPageIndex, totalPages, saveProgress]);
 
-  // Fullscreen toggle
+  // Synchronize fullscreen state with native browser events (e.g. Esc key)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Fullscreen toggle targeting reader container with auto-hide controls
   const toggleFullscreen = () => {
+    const el = containerRef.current || document.documentElement;
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      el.requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true);
+          setShowControls(false); // Otomatis sembunyikan bar navigasi saat fullscreen agar layar 100% immersive
+        })
+        .catch(() => {});
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(() => {});
     }
   };
 
@@ -143,6 +293,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
 
   const retryImage = (idx: number) => {
     setFailedImages((prev) => ({ ...prev, [idx]: false }));
+    setLoadedImages((prev) => ({ ...prev, [idx]: false }));
   };
 
   return (
@@ -345,7 +496,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
       </header>
 
       {/* 2. Reading Canvas */}
-      <main className="flex-1 pt-14 pb-20 flex flex-col items-center justify-center">
+      <div className="flex-1 pt-14 pb-20 flex flex-col items-center justify-center">
         {totalPages === 0 ? (
           <div className="py-24 text-center px-4">
             <p className="text-gray-400 text-base mb-4">
@@ -359,48 +510,24 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
             </button>
           </div>
         ) : readingMode === "webtoon" ? (
-          /* Webtoon Continuous Scroll (Gapless) */
+          /* Webtoon Continuous Scroll (Gapless with Sequential Prefetch) */
           <div className={`w-full ${widthClass} mx-auto flex flex-col items-center bg-black shadow-2xl`}>
-            {initialData.pages.map((imgUrl, idx) => {
-              const proxiedUrl = `/api/proxy?url=${encodeURIComponent(imgUrl)}`;
-              const isFailed = failedImages[idx];
-
-              return (
-                <div
-                  key={idx}
-                  className="relative w-full bg-[#0D0E14] overflow-hidden min-h-[300px]"
-                  style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
-                >
-                  {isFailed ? (
-                    <div className="py-16 px-4 text-center space-y-3 bg-[#12141D] border border-white/5">
-                      <p className="text-xs text-gray-400">Gagal memuat gambar lembar #{idx + 1}</p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          retryImage(idx);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F27D26] text-black text-xs font-bold"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        Coba Lagi
-                      </button>
-                    </div>
-                  ) : (
-                    /* Native img for exact gapless aspect ratio webtoon display */
-                    <img
-                      src={proxiedUrl}
-                      alt={`Halaman ${idx + 1}`}
-                      loading={idx < 3 ? "eager" : "lazy"}
-                      className="w-full h-auto block select-none"
-                      onError={() => setFailedImages((prev) => ({ ...prev, [idx]: true }))}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {initialData.pages.map((imgUrl, idx) => (
+              <WebtoonPageItem
+                key={idx}
+                imgUrl={imgUrl}
+                idx={idx}
+                isFailed={failedImages[idx]}
+                isLoaded={loadedImages[idx]}
+                onRetry={retryImage}
+                onIntersect={handlePageIntersect}
+                onLoad={(i) => setLoadedImages((prev) => ({ ...prev, [i]: true }))}
+                onError={(i) => setFailedImages((prev) => ({ ...prev, [i]: true }))}
+              />
+            ))}
           </div>
         ) : (
-          /* Paged Mode (Single Page) */
+          /* Paged Mode (Single Page with Smooth Transitions & Warm Cache) */
           <div
             className={`w-full ${widthClass} mx-auto flex flex-col items-center justify-center px-2 py-6`}
             onTouchStart={onTouchStart}
@@ -425,18 +552,33 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
                       e.stopPropagation();
                       retryImage(currentPageIndex);
                     }}
-                    className="px-4 py-2 bg-[#F27D26] text-black text-xs font-bold rounded-lg"
+                    className="px-4 py-2 bg-[#F27D26] text-black text-xs font-bold rounded-lg hover:bg-[#FFA24D] transition-colors"
                   >
                     Coba Lagi
                   </button>
                 </div>
               ) : (
-                <img
-                  src={`/api/proxy?url=${encodeURIComponent(initialData.pages[currentPageIndex])}`}
-                  alt={`Halaman ${currentPageIndex + 1}`}
-                  className="max-h-[85vh] w-auto mx-auto object-contain select-none"
-                  onError={() => setFailedImages((prev) => ({ ...prev, [currentPageIndex]: true }))}
-                />
+                <div className="relative w-full flex items-center justify-center">
+                  {!loadedImages[currentPageIndex] && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#0B0D12] animate-pulse min-h-[450px]">
+                      <span className="text-xs font-mono text-gray-500">
+                        Memuat lembar #{currentPageIndex + 1}...
+                      </span>
+                    </div>
+                  )}
+                  <img
+                    src={`/api/proxy?url=${encodeURIComponent(initialData.pages[currentPageIndex])}`}
+                    alt={`Halaman ${currentPageIndex + 1}`}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    className={`max-h-[85vh] w-auto mx-auto object-contain select-none transition-opacity duration-200 ${
+                      loadedImages[currentPageIndex] ? "opacity-100" : "opacity-0"
+                    }`}
+                    onLoad={() => setLoadedImages((prev) => ({ ...prev, [currentPageIndex]: true }))}
+                    onError={() => setFailedImages((prev) => ({ ...prev, [currentPageIndex]: true }))}
+                  />
+                </div>
               )}
             </div>
 
@@ -502,7 +644,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
             </Link>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* 4. Floating Bottom Dock */}
       <footer

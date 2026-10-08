@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Heart } from "lucide-react";
 
 export function Footer() {
+  const pathname = usePathname();
+
+  // Sembunyikan footer di mode reader (/manga/[slug]/[chapterId])
+  const isReadingChapter = /^\/manga\/[^\/]+\/[^\/]+/.test(pathname);
+  if (isReadingChapter) return null;
+
   return (
     <footer className="w-full bg-[#07080B] border-t border-white/5 py-12 mt-20 text-gray-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
