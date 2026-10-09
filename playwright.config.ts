@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.BASE_URL || "https://zynqtoon.vercel.app",
+    baseURL: process.env.BASE_URL || "https://zynqtoon.web.id",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

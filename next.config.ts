@@ -46,6 +46,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "zynqtoon.web.id",
+      },
+      {
+        protocol: "https",
+        hostname: "*.zynqtoon.web.id",
+      },
+      {
+        protocol: "https",
         hostname: "zynqtoon.vercel.app",
       },
       {

@@ -1,5 +1,5 @@
 const API_KEY = process.env.PAGESPEED_API_KEY;
-const TARGET_URL = process.env.TARGET_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.vercel.app";
+const TARGET_URL = process.env.TARGET_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id";
 
 if (!API_KEY) {
   console.error("Error: PAGESPEED_API_KEY environment variable is required to run audit.");

@@ -19,9 +19,10 @@ export async function generateMetadata({ params }: MangaPageProps): Promise<Meta
       ? comic.synopsis.slice(0, 160)
       : `Baca komik ${comic.title} Bahasa Indonesia terlengkap di ZqynToon.`;
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id";
     const proxiedCover = comic.cover
-      ? `https://zynqtoon.vercel.app/api/proxy?url=${encodeURIComponent(comic.cover)}`
-      : "https://zynqtoon.vercel.app/cover-placeholder.svg";
+      ? `${siteUrl}/api/proxy?url=${encodeURIComponent(comic.cover)}`
+      : `${siteUrl}/cover-placeholder.svg`;
 
     return {
       title,

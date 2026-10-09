@@ -1,4 +1,4 @@
-# ZqynToon (https://zynqtoon.vercel.app)
+# ZqynToon (https://zynqtoon.web.id)
 
 > Platform baca komik Manga, Manhwa, dan Manhua Bahasa Indonesia terlengkap, tercepat, dengan reader internal tanpa gangguan iklan dan tanpa pengalihan situs eksternal.
 

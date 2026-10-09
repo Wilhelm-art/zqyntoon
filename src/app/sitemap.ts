@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getPopularComics } from "@/lib/scraper/bacakomik";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id";
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

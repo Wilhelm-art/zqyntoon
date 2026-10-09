@@ -439,7 +439,7 @@ async function fetchMangaDexLatest(page: number = 1): Promise<{ comics: ComicIte
   const res = await fetch(
     `${MD_BASE}/chapter?translatedLanguage[]=id&order[readableAt]=desc&limit=${limit}&offset=${offset}&includes[]=manga&includes[]=scanlation_group`,
     {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 120 },
     }
   );
@@ -509,7 +509,7 @@ async function fetchMangaDexPopular(page: number = 1): Promise<ComicItem[]> {
   const res = await fetch(
     `${MD_BASE}/manga?availableTranslatedLanguage[]=id&limit=${limit}&offset=${offset}&order[followedCount]=desc&includes[]=cover_art`,
     {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 600 },
     }
   );
@@ -542,7 +542,7 @@ async function fetchMangaDexSearch(query: string): Promise<ComicItem[]> {
   const res = await fetch(
     `${MD_BASE}/manga?title=${encodeURIComponent(query)}&availableTranslatedLanguage[]=id&limit=20&includes[]=cover_art`,
     {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 120 },
     }
   );
@@ -574,7 +574,7 @@ async function fetchMangaDexDetail(mangaId: string): Promise<ComicDetail> {
   const mangaRes = await fetch(
     `${MD_BASE}/manga/${mangaId}?includes[]=cover_art&includes[]=author&includes[]=artist`,
     {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 600 },
     }
   );
@@ -602,7 +602,7 @@ async function fetchMangaDexDetail(mangaId: string): Promise<ComicDetail> {
   let feedRes = await fetch(
     `${MD_BASE}/manga/${mangaId}/feed?translatedLanguage[]=id&order[chapter]=desc&limit=500`,
     {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 300 },
     }
   );
@@ -612,7 +612,7 @@ async function fetchMangaDexDetail(mangaId: string): Promise<ComicDetail> {
 
   if (rawChapters.length === 0) {
     feedRes = await fetch(`${MD_BASE}/manga/${mangaId}/feed?order[chapter]=desc&limit=500`, {
-      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+      headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
       next: { revalidate: 300 },
     });
     feedJson = await feedRes.json();
@@ -664,7 +664,7 @@ async function fetchMangaDexDetail(mangaId: string): Promise<ComicDetail> {
 
 async function fetchMangaDexChapter(chapterId: string): Promise<ChapterPagesResult> {
   const chMetaRes = await fetch(`${MD_BASE}/chapter/${chapterId}?includes[]=manga`, {
-    headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.vercel.app)" },
+    headers: { "User-Agent": "ZqynToon/2.0 (https://zynqtoon.web.id)" },
     next: { revalidate: 600 },
   });
 

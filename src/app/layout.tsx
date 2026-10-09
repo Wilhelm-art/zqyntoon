@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id"),
   title: {
     default: "ZqynToon — Baca Komik Manga, Manhwa & Manhua Bahasa Indonesia",
     template: "%s | ZqynToon",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "id_ID",
-    url: "https://zynqtoon.vercel.app",
+    url: "https://zynqtoon.web.id",
     siteName: "ZqynToon",
     title: "ZqynToon — Baca Komik Manga & Manhwa Bahasa Indonesia",
     description:
@@ -96,11 +96,11 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "ZqynToon",
-    url: "https://zynqtoon.vercel.app",
+    url: "https://zynqtoon.web.id",
     description: "Platform baca komik manga, manhwa, dan manhua Bahasa Indonesia terlengkap.",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://zynqtoon.vercel.app/?s={search_term_string}",
+      target: "https://zynqtoon.web.id/?s={search_term_string}",
       "query-input": "required name=search_term_string",
     },
   };
