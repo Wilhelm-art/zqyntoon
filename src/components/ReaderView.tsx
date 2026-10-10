@@ -45,6 +45,7 @@ function WebtoonPageItem({
   onError,
 }: WebtoonPageItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     const el = itemRef.current;
@@ -58,14 +59,24 @@ function WebtoonPageItem({
           }
         }
       },
-      { rootMargin: "600px 0px" }
+      { rootMargin: "1600px 0px" } // Proactively warm images 2-3 screens before entering viewport
     );
 
     observer.observe(el);
     return () => observer.disconnect();
   }, [idx, onIntersect]);
 
-  const proxiedUrl = `/api/proxy?url=${encodeURIComponent(imgUrl)}`;
+  const proxiedUrl = `/api/proxy?url=${encodeURIComponent(imgUrl)}${retryAttempt > 0 ? `&_r=${retryAttempt}` : ""}`;
+
+  const handleImageError = () => {
+    if (retryAttempt < 2) {
+      setTimeout(() => {
+        setRetryAttempt((prev) => prev + 1);
+      }, 700 * (retryAttempt + 1));
+    } else {
+      onError(idx);
+    }
+  };
 
   return (
     <div
@@ -78,6 +89,7 @@ function WebtoonPageItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              setRetryAttempt(0);
               onRetry(idx);
             }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F27D26] text-black text-xs font-bold hover:bg-[#FFA24D] transition-colors"
@@ -98,14 +110,14 @@ function WebtoonPageItem({
           <img
             src={proxiedUrl}
             alt={`Halaman ${idx + 1}`}
-            loading={idx < 4 ? "eager" : "lazy"}
+            loading={idx < 6 ? "eager" : "lazy"}
             decoding="async"
-            fetchPriority={idx === 0 ? "high" : idx < 4 ? "auto" : "low"}
+            fetchPriority={idx < 2 ? "high" : idx < 6 ? "auto" : "low"}
             className={`w-full h-auto block select-none transition-opacity duration-200 ${
               isLoaded ? "opacity-100" : "opacity-0"
             }`}
             onLoad={() => onLoad(idx)}
-            onError={() => onError(idx)}
+            onError={handleImageError}
           />
         </>
       )}
@@ -143,10 +155,10 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
     img.src = proxied;
   }, []);
 
-  // Proactive initial prefetch: Warm up first 5 pages on chapter open
+  // Proactive initial prefetch: Warm up first 8 pages on chapter open
   useEffect(() => {
     if (!initialData.pages || initialData.pages.length === 0) return;
-    const initialBatch = initialData.pages.slice(0, 5);
+    const initialBatch = initialData.pages.slice(0, 8);
     initialBatch.forEach(prefetchImageUrl);
   }, [initialData.pages, prefetchImageUrl]);
 
@@ -162,8 +174,8 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const handlePageIntersect = useCallback(
     (idx: number) => {
       setCurrentPageIndex(idx);
-      // Prefetch up to 5 pages ahead
-      for (let offset = 1; offset <= 5; offset++) {
+      // Prefetch up to 8 pages ahead so reader never hits buffering
+      for (let offset = 1; offset <= 8; offset++) {
         const targetIdx = idx + offset;
         if (targetIdx < totalPages) {
           prefetchImageUrl(initialData.pages[targetIdx]);
@@ -190,7 +202,11 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   // Synchronize fullscreen state with native browser events (e.g. Esc key)
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isNowFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isNowFullscreen);
+      if (isNowFullscreen) {
+        setShowControls(false);
+      }
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
@@ -248,22 +264,50 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Auto-hide controls on scroll in webtoon mode
+  // Smart auto-hide controls on scroll with directional hysteresis
   useEffect(() => {
-    let lastScroll = 0;
+    let lastScroll = typeof window !== "undefined" ? window.scrollY : 0;
+
     const handleScroll = () => {
-      const currentScroll = window.scrollY;
-      if (currentScroll > lastScroll && currentScroll > 150) {
-        setShowControls(false);
-      } else if (currentScroll < lastScroll) {
-        setShowControls(true);
+      // In fullscreen mode, NEVER pop up controls on scroll! Fullscreen is pure reading mode.
+      if (document.fullscreenElement) {
+        return;
       }
-      lastScroll = currentScroll;
+
+      const currentScroll = window.scrollY;
+      const diff = currentScroll - lastScroll;
+
+      // Close to the very top: always show controls
+      if (currentScroll < 60) {
+        setShowControls(true);
+        lastScroll = currentScroll;
+        return;
+      }
+
+      // Significant scroll down (> 60px): hide controls
+      if (diff > 60) {
+        setShowControls(false);
+        lastScroll = currentScroll;
+      }
+      // Significant intentional scroll up (> 80px): reveal controls
+      else if (diff < -80) {
+        setShowControls(true);
+        lastScroll = currentScroll;
+      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Auto-hide controls in fullscreen after 3.5 seconds
+  useEffect(() => {
+    if (!showControls || !isFullscreen) return;
+    const timer = setTimeout(() => {
+      setShowControls(false);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [showControls, isFullscreen]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -300,7 +344,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
     <div
       ref={containerRef}
       style={{ filter: brightness < 100 ? `brightness(${brightness}%)` : undefined }}
-      className="min-h-screen bg-[#07080B] text-gray-100 flex flex-col select-none relative transition-[filter]"
+      className="min-h-screen bg-[#07080B] text-gray-100 flex flex-col select-none relative transition-[filter] -mb-16 md:mb-0"
       onClick={() => {
         // Toggle controls on canvas click
         if (settingsOpen) setSettingsOpen(false);
@@ -496,7 +540,11 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
       </header>
 
       {/* 2. Reading Canvas */}
-      <div className="flex-1 pt-14 pb-20 flex flex-col items-center justify-center">
+      <div
+        className={`flex-1 flex flex-col items-center justify-center transition-[padding] duration-300 ${
+          showControls && !isFullscreen ? "pt-14 pb-20" : "pt-0 pb-6"
+        }`}
+      >
         {totalPages === 0 ? (
           <div className="py-24 text-center px-4">
             <p className="text-gray-400 text-base mb-4">
