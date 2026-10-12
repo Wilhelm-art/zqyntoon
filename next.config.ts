@@ -98,6 +98,32 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "zynqtoon.vercel.app",
+          },
+        ],
+        destination: "https://zynqtoon.web.id/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.zynqtoon.web.id",
+          },
+        ],
+        destination: "https://zynqtoon.web.id/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
