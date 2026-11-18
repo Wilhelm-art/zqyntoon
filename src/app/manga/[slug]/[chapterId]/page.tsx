@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: ChapterPageProps): Promise<Me
   const { slug, chapterId } = await params;
   try {
     const chapterData = await getChapterPages(chapterId);
-    const title = `${chapterData.title} Bahasa Indonesia | ZqynToon`;
+    const title = `${chapterData.title} Bahasa Indonesia`;
     const description = `Baca komik ${chapterData.title} Bahasa Indonesia online di ZqynToon dengan kualitas HD dan reader internal tanpa gangguan.`;
 
     return {
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: ChapterPageProps): Promise<Me
     };
   } catch {
     return {
-      title: "Baca Chapter Komik | ZqynToon",
+      title: "Baca Chapter Komik",
     };
   }
 }

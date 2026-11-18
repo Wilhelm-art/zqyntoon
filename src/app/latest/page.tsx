@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLatestComics } from "@/lib/scraper/bacakomik";
@@ -8,6 +9,11 @@ interface LatestPageProps {
 }
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: "Rilis Terbaru",
+  description: "Update chapter komik manga, manhwa, dan manhua terbaru setiap hari Bahasa Indonesia di ZqynToon.",
+};
 
 export default async function LatestPage({ searchParams }: LatestPageProps) {
   const { page: pageQuery } = await searchParams;

@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: MangaPageProps): Promise<Meta
     };
   } catch {
     return {
-      title: "Detail Komik | ZqynToon",
+      title: "Detail Komik",
     };
   }
 }

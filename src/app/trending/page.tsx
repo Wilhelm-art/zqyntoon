@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { Flame } from "lucide-react";
 import { getPopularComics } from "@/lib/scraper/bacakomik";
 import { MangaCard } from "@/components/MangaCard";
 
 export const revalidate = 600;
+
+export const metadata: Metadata = {
+  title: "Komik Terpopuler",
+  description: "Daftar komik manga, manhwa, dan manhua paling ramai dibaca Bahasa Indonesia di ZqynToon.",
+};
 
 export default async function TrendingPage() {
   const comics = await getPopularComics().catch(() => []);
