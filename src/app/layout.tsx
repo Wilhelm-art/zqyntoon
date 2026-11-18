@@ -14,7 +14,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#07080B",
+  themeColor: "#F27D26",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -67,7 +67,8 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "ZqynToon Comic Reader",
+        type: "image/jpeg",
+        alt: "ZqynToon — Baca Komik Manga & Manhwa Bahasa Indonesia",
       },
     ],
   },
@@ -76,6 +77,7 @@ export const metadata: Metadata = {
     title: "ZqynToon — Baca Komik Bahasa Indonesia",
     description:
       "Baca komik manga, manhwa & manhua terlengkap Bahasa Indonesia tanpa redirect eksternal.",
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,

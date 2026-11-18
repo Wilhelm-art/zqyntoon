@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: MangaPageProps): Promise<Meta
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id";
     const proxiedCover = comic.cover
       ? `${siteUrl}/api/proxy?url=${encodeURIComponent(comic.cover)}`
-      : `${siteUrl}/cover-placeholder.svg`;
+      : `${siteUrl}/og-image.jpg`;
 
     return {
       title,

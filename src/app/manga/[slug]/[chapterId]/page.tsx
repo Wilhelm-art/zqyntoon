@@ -13,9 +13,17 @@ interface ChapterPageProps {
 export async function generateMetadata({ params }: ChapterPageProps): Promise<Metadata> {
   const { slug, chapterId } = await params;
   try {
-    const chapterData = await getChapterPages(chapterId);
+    const [chapterData, comic] = await Promise.all([
+      getChapterPages(chapterId),
+      getComicDetail(slug).catch(() => undefined),
+    ]);
     const title = `${chapterData.title} Bahasa Indonesia`;
     const description = `Baca komik ${chapterData.title} Bahasa Indonesia online di ZqynToon dengan kualitas HD dan reader internal tanpa gangguan.`;
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zynqtoon.web.id";
+    const proxiedCover = comic?.cover
+      ? `${siteUrl}/api/proxy?url=${encodeURIComponent(comic.cover)}`
+      : `${siteUrl}/og-image.jpg`;
 
     return {
       title,
@@ -24,6 +32,13 @@ export async function generateMetadata({ params }: ChapterPageProps): Promise<Me
         title,
         description,
         type: "article",
+        images: [{ url: proxiedCover }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [proxiedCover],
       },
     };
   } catch {
