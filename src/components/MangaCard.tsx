@@ -40,6 +40,7 @@ export function MangaCard({ comic, priority = false }: MangaCardProps) {
           src={imgError ? "/cover-placeholder.svg" : proxiedCover}
           alt={comic.title}
           fill
+          unoptimized
           sizes="(max-width: 640px) 160px, (max-width: 1024px) 220px, 200px"
           quality={75}
           priority={priority}

@@ -48,6 +48,7 @@ export default async function HomePage() {
                 src={featuredCover}
                 alt={featuredComic.title}
                 fill
+                unoptimized
                 priority
                 fetchPriority="high"
                 sizes="(max-width: 640px) 192px, (max-width: 768px) 240px, 288px"

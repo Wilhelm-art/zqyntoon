@@ -107,6 +107,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                 src={proxiedCover}
                 alt={comic.title}
                 fill
+                unoptimized
                 priority
                 sizes="(max-width: 640px) 176px, (max-width: 1024px) 224px, 256px"
                 quality={80}
