@@ -25,20 +25,37 @@ export async function generateMetadata({ params }: ChapterPageProps): Promise<Me
       ? `${siteUrl}/api/proxy?url=${encodeURIComponent(comic.cover)}`
       : `${siteUrl}/og-image.jpg`;
 
+    const canonicalUrl = `${siteUrl}/manga/${slug}/${chapterId}`;
+
     return {
       title,
       description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
         title,
         description,
         type: "article",
-        images: [{ url: proxiedCover }],
+        url: canonicalUrl,
+        siteName: "ZqynToon",
+        locale: "id_ID",
+        images: [
+          {
+            url: proxiedCover,
+            secureUrl: proxiedCover,
+            alt: `${chapterData.title} Bahasa Indonesia - ZqynToon`,
+            type: "image/jpeg",
+          },
+        ],
       },
       twitter: {
         card: "summary_large_image",
         title,
         description,
         images: [proxiedCover],
+        site: "@zqyntoon",
+        creator: "@zqyntoon",
       },
     };
   } catch {

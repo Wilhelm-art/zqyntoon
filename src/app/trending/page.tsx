@@ -8,6 +8,15 @@ export const revalidate = 600;
 export const metadata: Metadata = {
   title: "Komik Terpopuler",
   description: "Daftar komik manga, manhwa, dan manhua paling ramai dibaca Bahasa Indonesia di ZqynToon.",
+  alternates: {
+    canonical: "https://zynqtoon.web.id/trending",
+  },
+  openGraph: {
+    title: "Komik Terpopuler Bahasa Indonesia | ZqynToon",
+    description: "Daftar komik manga, manhwa, dan manhua paling ramai dibaca Bahasa Indonesia di ZqynToon.",
+    url: "https://zynqtoon.web.id/trending",
+    siteName: "ZqynToon",
+  },
 };
 
 export default async function TrendingPage() {

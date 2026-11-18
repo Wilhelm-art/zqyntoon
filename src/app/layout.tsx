@@ -49,6 +49,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+  icons: {
+    icon: "/icon",
+    apple: "/icon",
+    shortcut: "/icon",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -59,25 +64,28 @@ export const metadata: Metadata = {
     locale: "id_ID",
     url: "https://zynqtoon.web.id",
     siteName: "ZqynToon",
-    title: "ZqynToon — Baca Komik Manga & Manhwa Bahasa Indonesia",
+    title: "ZqynToon — Baca Komik Manga, Manhwa & Manhua Bahasa Indonesia",
     description:
-      "Platform baca komik online Bahasa Indonesia dengan reader internal tercepat tanpa iklan mengganggu.",
+      "Platform baca komik Manga, Manhwa, dan Manhua Bahasa Indonesia terlengkap, tercepat, dengan reader internal mulus tanpa iklan pop-up dan tanpa redirect eksternal.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "https://zynqtoon.web.id/og-image.jpg",
+        secureUrl: "https://zynqtoon.web.id/og-image.jpg",
         width: 1200,
         height: 630,
         type: "image/jpeg",
-        alt: "ZqynToon — Baca Komik Manga & Manhwa Bahasa Indonesia",
+        alt: "ZqynToon — Baca Komik Manga, Manhwa & Manhua Bahasa Indonesia",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ZqynToon — Baca Komik Bahasa Indonesia",
+    title: "ZqynToon — Baca Komik Manga, Manhwa & Manhua Bahasa Indonesia",
     description:
       "Baca komik manga, manhwa & manhua terlengkap Bahasa Indonesia tanpa redirect eksternal.",
-    images: ["/og-image.jpg"],
+    images: ["https://zynqtoon.web.id/og-image.jpg"],
+    site: "@zqyntoon",
+    creator: "@zqyntoon",
   },
   robots: {
     index: true,
@@ -103,6 +111,16 @@ export default function RootLayout({
     name: "ZqynToon",
     url: "https://zynqtoon.web.id",
     description: "Platform baca komik manga, manhwa, dan manhua Bahasa Indonesia terlengkap.",
+    image: "https://zynqtoon.web.id/og-image.jpg",
+    publisher: {
+      "@type": "Organization",
+      name: "ZqynToon",
+      url: "https://zynqtoon.web.id",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://zynqtoon.web.id/icon",
+      },
+    },
     potentialAction: {
       "@type": "SearchAction",
       target: "https://zynqtoon.web.id/?s={search_term_string}",
@@ -113,6 +131,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="dark">
       <head>
+        <link rel="image_src" href="https://zynqtoon.web.id/og-image.jpg" />
         <link rel="preconnect" href="https://thumbnail.komiku.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://thumbnail.komiku.to" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://uploads.mangadex.org" crossOrigin="anonymous" />

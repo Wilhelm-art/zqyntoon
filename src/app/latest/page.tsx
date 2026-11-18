@@ -13,6 +13,15 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Rilis Terbaru",
   description: "Update chapter komik manga, manhwa, dan manhua terbaru setiap hari Bahasa Indonesia di ZqynToon.",
+  alternates: {
+    canonical: "https://zynqtoon.web.id/latest",
+  },
+  openGraph: {
+    title: "Rilis Komik Terbaru Bahasa Indonesia | ZqynToon",
+    description: "Update chapter komik manga, manhwa, dan manhua terbaru setiap hari Bahasa Indonesia di ZqynToon.",
+    url: "https://zynqtoon.web.id/latest",
+    siteName: "ZqynToon",
+  },
 };
 
 export default async function LatestPage({ searchParams }: LatestPageProps) {
