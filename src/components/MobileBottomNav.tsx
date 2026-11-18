@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Flame, Bookmark, History, Search } from "lucide-react";
@@ -8,8 +9,13 @@ import { useSearchStore } from "@/store/searchStore";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const bookmarks = useBookmarkStore((state) => state.bookmarks);
   const openSearch = useSearchStore((state) => state.openSearch);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Hide bottom bar when inside chapter reader to avoid double docks
   const isReadingChapter = /^\/manga\/[^\/]+\/[^\/]+/.test(pathname);
@@ -23,7 +29,7 @@ export function MobileBottomNav() {
       href: "/bookmarks",
       label: "Bookmark",
       icon: Bookmark,
-      badge: bookmarks.length > 0 ? bookmarks.length : undefined,
+      badge: mounted && bookmarks.length > 0 ? bookmarks.length : undefined,
     },
     { href: "/history", label: "Riwayat", icon: History },
   ];

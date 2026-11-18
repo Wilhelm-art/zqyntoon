@@ -76,7 +76,7 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} ZqynToon. Hak Cipta Dilindungi.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} ZqynToon. Hak Cipta Dilindungi.</p>
           <p className="flex items-center gap-1.5">
             Dibuat dengan <Heart className="w-3.5 h-3.5 text-[#F27D26] fill-[#F27D26]" /> untuk Pembaca Komik Indonesia
           </p>

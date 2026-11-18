@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ArrowUpDown, Bookmark, BookmarkCheck, BookOpen, Clock, CheckCircle } from "lucide-react";
 import type { ComicDetail } from "@/lib/scraper/bacakomik";
@@ -15,12 +15,17 @@ export function ComicDetailClient({ comic }: ComicDetailClientProps) {
   const [chapterSearch, setChapterSearch] = useState("");
   const [sortDescending, setSortDescending] = useState(true);
   const [visibleCount, setVisibleCount] = useState(48);
+  const [mounted, setMounted] = useState(false);
 
   const { isBookmarked, addBookmark, removeBookmark } = useBookmarkStore();
   const { getComicProgress } = useHistoryStore();
 
-  const bookmarked = isBookmarked(comic.slug);
-  const readingProgress = getComicProgress(comic.slug);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const bookmarked = mounted && isBookmarked(comic.slug);
+  const readingProgress = mounted ? getComicProgress(comic.slug) : undefined;
 
   const toggleBookmark = () => {
     if (bookmarked) {

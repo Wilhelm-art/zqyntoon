@@ -127,8 +127,13 @@ function WebtoonPageItem({
 
 export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const { readingMode, imageWidth, setReadingMode, setImageWidth } = useReaderStore();
   const { saveProgress } = useHistoryStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -143,6 +148,9 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   const touchStartX = useRef<number | null>(null);
   const preloadedUrls = useRef<Set<string>>(new Set());
   const totalPages = initialData.pages.length;
+
+  const activeReadingMode = mounted ? readingMode : "webtoon";
+  const activeImageWidth = mounted ? imageWidth : "default";
 
   // Background image prefetcher for instant page transitions
   const prefetchImageUrl = useCallback((rawUrl: string) => {
@@ -329,9 +337,9 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
   };
 
   const widthClass =
-    imageWidth === "narrow"
+    activeImageWidth === "narrow"
       ? "max-w-2xl"
-      : imageWidth === "full"
+      : activeImageWidth === "full"
       ? "max-w-none w-full"
       : "max-w-4xl";
 
@@ -557,7 +565,7 @@ export function ReaderView({ initialData, comicDetail }: ReaderViewProps) {
               Muat Ulang Halaman
             </button>
           </div>
-        ) : readingMode === "webtoon" ? (
+        ) : activeReadingMode === "webtoon" ? (
           /* Webtoon Continuous Scroll (Gapless with Sequential Prefetch) */
           <div className={`w-full ${widthClass} mx-auto flex flex-col items-center bg-black shadow-2xl`}>
             {initialData.pages.map((imgUrl, idx) => (

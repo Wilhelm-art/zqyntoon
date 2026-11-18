@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Bookmark, History, Flame, Clock, Compass, Menu, X } from "lucide-react";
@@ -12,7 +12,12 @@ export function Navbar() {
   const pathname = usePathname();
   const { isOpen: searchOpen, openSearch, closeSearch } = useSearchStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const bookmarks = useBookmarkStore((state) => state.bookmarks);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sembunyikan global navbar di mode reader (/manga/[slug]/[chapterId]) agar tidak menutupi canvas baca komik
   const isReadingChapter = /^\/manga\/[^\/]+\/[^\/]+/.test(pathname);
@@ -26,7 +31,7 @@ export function Navbar() {
       href: "/bookmarks",
       label: "Bookmark",
       icon: Bookmark,
-      badge: bookmarks.length > 0 ? bookmarks.length : undefined,
+      badge: mounted && bookmarks.length > 0 ? bookmarks.length : undefined,
     },
     { href: "/history", label: "Riwayat", icon: History },
   ];

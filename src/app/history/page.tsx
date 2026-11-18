@@ -1,12 +1,18 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { History, BookOpen, Clock } from "lucide-react";
 import { useHistoryStore } from "@/store/historyStore";
 
 export default function HistoryPage() {
+  const [mounted, setMounted] = useState(false);
   const { history } = useHistoryStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 min-h-screen">
@@ -25,11 +31,17 @@ export default function HistoryPage() {
           </div>
         </div>
         <span className="text-xs px-3 py-1 rounded-full bg-white/5 text-gray-300 font-semibold border border-white/10">
-          {history.length} Terbaca
+          {mounted ? history.length : 0} Terbaca
         </span>
       </div>
 
-      {history.length > 0 ? (
+      {!mounted ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-2xl bg-white/5 animate-pulse" />
+          ))}
+        </div>
+      ) : history.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {history.map((item) => {
             const proxiedCover = item.cover

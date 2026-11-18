@@ -1,12 +1,18 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bookmark, Trash2, BookOpen } from "lucide-react";
 import { useBookmarkStore } from "@/store/bookmarkStore";
 
 export default function BookmarksPage() {
+  const [mounted, setMounted] = useState(false);
   const { bookmarks, removeBookmark } = useBookmarkStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 min-h-screen">
@@ -25,11 +31,17 @@ export default function BookmarksPage() {
           </div>
         </div>
         <span className="text-xs px-3 py-1 rounded-full bg-white/5 text-gray-300 font-semibold border border-white/10">
-          {bookmarks.length} Komik Tersimpan
+          {mounted ? bookmarks.length : 0} Komik Tersimpan
         </span>
       </div>
 
-      {bookmarks.length > 0 ? (
+      {!mounted ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-[3/4] rounded-xl bg-white/5 animate-pulse" />
+          ))}
+        </div>
+      ) : bookmarks.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
           {bookmarks.map((comic) => {
             const proxiedCover = comic.cover
