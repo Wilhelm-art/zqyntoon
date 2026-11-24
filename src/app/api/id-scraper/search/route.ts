@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchComics } from "@/lib/scraper/bacakomik";
 
+export const runtime = "edge";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") || "";

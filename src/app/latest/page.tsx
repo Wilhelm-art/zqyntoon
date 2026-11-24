@@ -4,6 +4,8 @@ import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLatestComics } from "@/lib/scraper/bacakomik";
 import { MangaCard } from "@/components/MangaCard";
 
+export const runtime = "edge";
+
 interface LatestPageProps {
   searchParams: Promise<{ page?: string }>;
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 // SSRF & Open Proxy Protection: Strictly allowed upstream domains
 const ALLOWED_IMAGE_DOMAINS = [
   "komiku.org",

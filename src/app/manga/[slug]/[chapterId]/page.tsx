@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getChapterPages, getComicDetail } from "@/lib/scraper/bacakomik";
 import { ReaderView } from "@/components/ReaderView";
 
+export const runtime = "edge";
+
 interface ChapterPageProps {
   params: Promise<{
     slug: string;

@@ -3,6 +3,8 @@ import { Flame } from "lucide-react";
 import { getPopularComics } from "@/lib/scraper/bacakomik";
 import { MangaCard } from "@/components/MangaCard";
 
+export const runtime = "edge";
+
 export const revalidate = 600;
 
 export const metadata: Metadata = {

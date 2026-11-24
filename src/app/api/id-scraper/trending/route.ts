@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPopularComics } from "@/lib/scraper/bacakomik";
 
+export const runtime = "edge";
+
 export async function GET() {
   try {
     const comics = await getPopularComics();

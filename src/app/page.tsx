@@ -4,6 +4,8 @@ import { Flame, Clock, Sparkles, BookOpen, ChevronRight, Star } from "lucide-rea
 import { getLatestComics, getPopularComics } from "@/lib/scraper/bacakomik";
 import { MangaCard } from "@/components/MangaCard";
 
+export const runtime = "edge";
+
 // Revalidate home page every 5 minutes
 export const revalidate = 300;
 

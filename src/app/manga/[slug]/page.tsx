@@ -6,6 +6,8 @@ import { Star, User, Palette } from "lucide-react";
 import { getComicDetail } from "@/lib/scraper/bacakomik";
 import { ComicDetailClient } from "@/components/ComicDetailClient";
 
+export const runtime = "edge";
+
 interface MangaPageProps {
   params: Promise<{ slug: string }>;
 }
